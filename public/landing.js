@@ -14,8 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Leave these empty and let users paste keys in the UI (stored in their browser localStorage).
     const chatOpenAIKey = '';
     const chatGeminiKey = '';
-    const chatStripeKey = 'pk_live_51StsFSFiJCDaNvF8bZBWHJE1WVODOnAek3kmq7eyIaaTOO5A8HfGmdS3ejArloPzSjhnqJcgDLjFmQZ0YMey4MXt00wPqCXoq8';
-    const chatPriceId = 'price_1Su8EXFiJCDaNvF8BlrcMWLQ';
+    // Stripe: do NOT hardcode publishable keys or price IDs in source control.
+    // Users can configure these in the app (stored in their browser localStorage).
+    const chatStripeKey = '';
+    const chatPriceId = '';
 
     const openaiInput = document.getElementById('openai-api-key');
     const geminiInput = document.getElementById('gemini-api-key');
@@ -28,10 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
         geminiInput.value = chatGeminiKey;
         localStorage.setItem(STORAGE_KEYS.GEMINI_API_KEY, chatGeminiKey);
     }
-    if (!localStorage.getItem('stripe_publishable_key')) {
+    if (chatStripeKey && !localStorage.getItem('stripe_publishable_key')) {
         localStorage.setItem('stripe_publishable_key', chatStripeKey);
     }
-    if (!localStorage.getItem('stripe_price_id')) {
+    if (chatPriceId && !localStorage.getItem('stripe_price_id')) {
         localStorage.setItem('stripe_price_id', chatPriceId);
     }
     

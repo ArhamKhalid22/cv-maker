@@ -97,16 +97,8 @@ async function startStripeCheckout() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Auto-fill keys from previous chat if empty
-    const chatStripeKey = 'pk_live_51StsFSFiJCDaNvF8bZBWHJE1WVODOnAek3kmq7eyIaaTOO5A8HfGmdS3ejArloPzSjhnqJcgDLjFmQZ0YMey4MXt00wPqCXoq8';
-    const chatPriceId = 'price_1Su8EXFiJCDaNvF8BlrcMWLQ';
-
-    if (!localStorage.getItem(STORAGE_KEYS.STRIPE_PUBLISHABLE_KEY)) {
-        localStorage.setItem(STORAGE_KEYS.STRIPE_PUBLISHABLE_KEY, chatStripeKey);
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.STRIPE_PRICE_ID)) {
-        localStorage.setItem(STORAGE_KEYS.STRIPE_PRICE_ID, chatPriceId);
-    }
+    // Stripe: do NOT hardcode keys/IDs in source control.
+    // Users configure these in the app (stored in their browser localStorage).
 
     publishableKeyInput.value = localStorage.getItem(STORAGE_KEYS.STRIPE_PUBLISHABLE_KEY) || '';
     priceIdInput.value = localStorage.getItem(STORAGE_KEYS.STRIPE_PRICE_ID) || '';
@@ -116,4 +108,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     saveStripeBtn.addEventListener('click', saveStripeConfig);
     document.getElementById('stripe-checkout-btn').addEventListener('click', startStripeCheckout);
+
+    // Configure Stripe Buy Button dynamically (prevents committing live keys)
+    const buyButton = document.getElementById('stripe-buy-button');
+    if (buyButton) {
+        const publishableKey = localStorage.getItem(STORAGE_KEYS.STRIPE_PUBLISHABLE_KEY) || '';
+        const buyButtonId = localStorage.getItem('stripe_buy_button_id') || '';
+
+        if (publishableKey && buyButtonId) {
+            buyButton.setAttribute('publishable-key', publishableKey);
+            buyButton.setAttribute('buy-button-id', buyButtonId);
+        } else {
+            // Hide buy button if not configured
+            const container = document.getElementById('stripe-buy-button-container');
+            if (container) container.style.display = 'none';
+            showMessage('Stripe Buy Button not configured. Save your Stripe settings first.', false);
+        }
+    }
 });

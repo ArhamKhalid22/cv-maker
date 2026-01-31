@@ -43,11 +43,8 @@
                 <div style="flex: 0 0 200px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); text-align: center; border: 1px solid #edf2f7;">
                     <div id="stripe-buy-button-container">
                         <script async src="https://js.stripe.com/v3/buy-button.js"></script>
-                        <stripe-buy-button
-                            buy-button-id="buy_btn_1SvLI9FiJCDaNvF8O1TlNLg1"
-                            publishable-key="pk_live_51StsFSFiJCDaNvF8bZBWHJE1WVODOnAek3kmq7eyIaaTOO5A8HfGmdS3ejArloPzSjhnqJcgDLjFmQZ0YMey4MXt00wPqCXoq8"
-                        >
-                        </stripe-buy-button>
+                        <!-- Configured dynamically from localStorage in payment.js -->
+                        <stripe-buy-button id="stripe-buy-button"></stripe-buy-button>
                     </div>
                 </div>
             </div>
