@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="origin-when-cross-origin">
+    <title>Login - AI Resume Builder</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+    <style>
+        body {
+            background: #7c8bd4;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: #f8fafc;
+            border-radius: 14px;
+            padding: 30px 28px;
+            width: 360px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+            border: 2px solid #90caf9;
+        }
+        .login-card h2 {
+            text-align: center;
+            font-size: 18px;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            color: #0f172a;
+        }
+        .login-group {
+            margin-bottom: 14px;
+        }
+        .login-group label {
+            display: block;
+            font-size: 13px;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+        .login-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #fff;
+        }
+        .row-between {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+        .row-between a {
+            color: #64748b;
+            text-decoration: none;
+        }
+        .login-btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            background: #ec5b81;
+            color: #fff;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8;
+            font-size: 12px;
+            margin: 12px 0 10px;
+        }
+        .divider::before,
+        .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+        .social-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .social-btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+        .social-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .social-btn.google {
+            color: #ef4444;
+            background: url('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg') no-repeat center;
+            background-size: 20px;
+        }
+        .social-btn.facebook {
+            color: #2563eb;
+            background: url('https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png') no-repeat center;
+            background-size: 20px;
+        }
+        .social-btn.linkedin {
+            color: #0ea5e9;
+            background: url('https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png') no-repeat center;
+            background-size: 20px;
+        }
+        .signup-link {
+            text-align: center;
+            font-size: 12px;
+            color: #64748b;
+        }
+        .signup-link a {
+            color: #0f172a;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            display: none;
+            margin-bottom: 10px;
+        }
+        .error-message.show {
+            display: block;
+        }
+        .form-hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h2>LOGIN</h2>
+        <div id="error-message" class="error-message"></div>
+
+        <form id="signin-form" onsubmit="handleSignIn(event)">
+            <div class="login-group">
+                <label for="signin-email">Email</label>
+                <input type="email" id="signin-email" required>
+            </div>
+            <div class="login-group">
+                <label for="signin-password">Password</label>
+                <input type="password" id="signin-password" required>
+            </div>
+            <div class="row-between">
+                <label><input type="checkbox" id="remember-me"> Remember me?</label>
+                <a href="#" onclick="showError('Password reset is not available yet.'); return false;">Forgot Password?</a>
+            </div>
+            <button type="submit" class="login-btn">LOGIN</button>
+        </form>
+
+        <form id="signup-form" class="form-hidden" onsubmit="handleSignUp(event)">
+            <div class="login-group">
+                <label for="signup-name">Full Name</label>
+                <input type="text" id="signup-name" required>
+            </div>
+            <div class="login-group">
+                <label for="signup-email">Email</label>
+                <input type="email" id="signup-email" required>
+            </div>
+            <div class="login-group">
+                <label for="signup-password">Password</label>
+                <input type="password" id="signup-password" required minlength="6">
+            </div>
+            <div class="login-group">
+                <label for="signup-confirm-password">Confirm Password</label>
+                <input type="password" id="signup-confirm-password" required minlength="6">
+            </div>
+            <button type="submit" class="login-btn">CREATE ACCOUNT</button>
+        </form>
+
+        <div class="divider">OR</div>
+        <div class="social-row">
+            <div class="social-btn-group">
+                <button class="social-btn google" id="google-login-btn" aria-label="Google" onclick="promptGoogleSignIn()"></button>
+            </div>
+            <div id="google-button-container" style="display: none;"></div>
+        </div>
+
+        <div class="signup-link">
+            Need an account? <a href="#" id="toggle-signup">SIGN UP</a>
+        </div>
+    </div>
+
+    <script>
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+
+        function hideError() {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.classList.remove('show');
+        }
+
+        function toggleSignupForm(showSignup) {
+            document.getElementById('signin-form').classList.toggle('form-hidden', showSignup);
+            document.getElementById('signup-form').classList.toggle('form-hidden', !showSignup);
+            document.getElementById('toggle-signup').textContent = showSignup ? 'BACK TO LOGIN' : 'SIGN UP';
+            hideError();
+        }
+
+        function handleSignUp(event) {
+            event.preventDefault();
+            hideError();
+
+            const name = document.getElementById('signup-name').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+            if (password.length < 6) {
+                showError('Password must be at least 6 characters long');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showError('Passwords do not match');
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            if (users.find(u => u.email === email)) {
+                showError('Email already registered. Please sign in instead.');
+                return;
+            }
+
+            const newUser = {
+                id: Date.now().toString(),
+                name,
+                email,
+                password: btoa(password),
+                createdAt: new Date().toISOString()
+            };
+
+            users.push(newUser);
+            localStorage.setItem('users', JSON.stringify(users));
+            localStorage.setItem('currentUser', JSON.stringify({
+                id: newUser.id,
+                name: newUser.name,
+                email: newUser.email
+            }));
+
+            window.location.href = 'index.html';
+        }
+
+        function handleSignIn(event) {
+            event.preventDefault();
+            hideError();
+
+            const email = document.getElementById('signin-email').value.trim();
+            const password = document.getElementById('signin-password').value;
+
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const user = users.find(u => u.email === email && u.password === btoa(password));
+
+            if (!user) {
+                showError('Invalid email or password');
+                return;
+            }
+
+            localStorage.setItem('currentUser', JSON.stringify({
+                id: user.id,
+                name: user.name,
+                email: user.email
+            }));
+
+            window.location.href = 'index.html';
+        }
+
+        function parseJwt(token) {
+            try {
+                const payload = token.split('.')[1];
+                const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+                return JSON.parse(decodeURIComponent(escape(decoded)));
+            } catch (error) {
+                console.error('Failed to parse JWT:', error);
+                return null;
+            }
+        }
+
+        function handleGoogleCredential(response) {
+            const profile = parseJwt(response.credential);
+            if (!profile) {
+                showError('Google sign-in failed. Please try again.');
+                return;
+            }
+
+            localStorage.setItem('currentUser', JSON.stringify({
+                id: profile.sub,
+                name: profile.name,
+                email: profile.email
+            }));
+
+            window.location.href = 'index.html';
+        }
+
+        const DEFAULT_GOOGLE_CLIENT_ID = '22746771804-d70p38r90kk0fme6bc7mg5sieh9infgd.apps.googleusercontent.com';
+        let googleInitialized = false;
+        let googleUseFedcm = true;
+
+        function ensureGoogleClientId() {
+            const existing = localStorage.getItem('google_client_id');
+            if (!existing) {
+                localStorage.setItem('google_client_id', DEFAULT_GOOGLE_CLIENT_ID);
+            }
+        }
+
+        function initGoogleSignIn() {
+            const clientId = localStorage.getItem('google_client_id');
+            if (!clientId || !window.google || !google.accounts || !google.accounts.id) {
+                return;
+            }
+            if (googleInitialized) {
+                return;
+            }
+
+            google.accounts.id.initialize({
+                client_id: clientId,
+                callback: handleGoogleCredential,
+                auto_select: false,
+                itp_support: true,
+                use_fedcm_for_prompt: googleUseFedcm // This will be true initially, then false on retry
+            });
+
+            // Render the hidden official Google button (still needed for the flow)
+            const container = document.getElementById("google-button-container");
+            if (container) {
+                google.accounts.id.renderButton(
+                    container,
+                    { 
+                        theme: "outline", 
+                        size: "large", 
+                        text: "signin_with",
+                        shape: "rectangular" 
+                    }
+                );
+            }
+
+            googleInitialized = true;
+        }
+
+        function promptGoogleSignIn() {
+            const clientId = localStorage.getItem('google_client_id');
+            if (!clientId) {
+                showError('Google Client ID missing. Set it on /landing.');
+                return;
+            }
+            if (!window.google || !google.accounts || !google.accounts.id) {
+                showError('Google sign-in failed to load. Check your connection or ad blockers.');
+                return;
+            }
+            initGoogleSignIn();
+            google.accounts.id.prompt((notification) => {
+                try {
+                    const isNotDisplayed = typeof notification?.isNotDisplayed === 'function' && notification.isNotDisplayed();
+                    const isSkipped = typeof notification?.isSkippedMoment === 'function' && notification.isSkippedMoment();
+                    const notDisplayedReason =
+                        typeof notification?.getNotDisplayedReason === 'function'
+                            ? notification.getNotDisplayedReason()
+                            : '';
+
+                    if (googleUseFedcm && (isNotDisplayed || isSkipped)) {
+                        const reasonText = notDisplayedReason ? ` (${notDisplayedReason})` : '';
+                        showError(`Google sign-in couldn't complete${reasonText}. Retrying without FedCM...`);
+                        googleUseFedcm = false;
+                        googleInitialized = false;
+                        initGoogleSignIn();
+                        google.accounts.id.prompt();
+                    } else if (isNotDisplayed) {
+                        const reasonText = notDisplayedReason ? ` (${notDisplayedReason})` : '';
+                        showError(`Google sign-in not displayed${reasonText}. Try disabling blockers or using another browser.`);
+                    }
+                } catch (e) {
+                    console.warn('Google prompt notification handling failed:', e);
+                }
+            });
+        }
+
+        function waitForGoogleScript(maxAttempts = 20) {
+            let attempts = 0;
+            const interval = setInterval(() => {
+                attempts += 1;
+                initGoogleSignIn();
+                if (googleInitialized || attempts >= maxAttempts) {
+                    clearInterval(interval);
+                }
+            }, 300);
+        }
+
+        document.getElementById('toggle-signup').addEventListener('click', (event) => {
+            event.preventDefault();
+            const showingSignup = !document.getElementById('signup-form').classList.contains('form-hidden');
+            toggleSignupForm(!showingSignup);
+        });
+
+        // --- Facebook Auth ---
+        function initFacebookSDK() {
+            window.fbAsyncInit = function() {
+                FB.init({
+                    appId      : localStorage.getItem('facebook_app_id') || 'YOUR_FB_APP_ID',
+                    cookie     : true,
+                    xfbml      : true,
+                    version    : 'v18.0'
+                });
+            };
+        }
+
+        function handleFacebookSignIn() {
+            const appId = localStorage.getItem('facebook_app_id');
+            if (!appId || appId === 'YOUR_FB_APP_ID') {
+                showError('Please set your Facebook App ID on the /landing page.');
+                return;
+            }
+
+            FB.login(function(response) {
+                if (response.status === 'connected') {
+                    FB.api('/me', {fields: 'name,email,picture'}, function(profile) {
+                        localStorage.setItem('currentUser', JSON.stringify({
+                            id: profile.id,
+                            name: profile.name,
+                            email: profile.email || `${profile.id}@facebook.com`,
+                            provider: 'facebook',
+                            picture: profile.picture?.data?.url
+                        }));
+                        window.location.href = 'index.html';
+                    });
+                } else {
+                    showError('Facebook sign-in was cancelled or failed.');
+                }
+            }, {scope: 'public_profile,email'});
+        }
+
+        // --- LinkedIn Auth ---
+        function handleLinkedInSignIn() {
+            const clientId = localStorage.getItem('linkedin_client_id');
+            if (!clientId) {
+                showError('LinkedIn requires a Client ID. Set it on /landing.');
+                return;
+            }
+
+            const redirectUri = window.location.origin + '/login'; 
+            const state = btoa(Date.now().toString());
+            const scope = 'openid profile email';
+            
+            const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scope)}`;
+            
+            window.location.href = authUrl;
+        }
+
+        document.getElementById('facebook-login-btn').addEventListener('click', handleFacebookSignIn);
+        document.getElementById('linkedin-login-btn').addEventListener('click', handleLinkedInSignIn);
+
+        window.addEventListener('load', () => {
+            ensureGoogleClientId();
+            initGoogleSignIn();
+            waitForGoogleScript();
+            initFacebookSDK();
+        });
+    </script>
+</body>
+</html>

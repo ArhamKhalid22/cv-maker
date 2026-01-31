@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Builder - Job Description Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>📄 AI Resume Builder</h1>
+                    <p>Analyze job descriptions and create customized resumes</p>
+                </div>
+                <div id="user-info" style="display: none;">
+                    <a href="/payment" id="upgrade-btn" style="background: #ffd700; color: #000; padding: 6px 15px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 13px; margin-right: 15px; transition: all 0.3s;">🚀 Upgrade to Pro</a>
+                    <span id="user-name" style="color: white; margin-right: 15px;"></span>
+                    <button class="btn btn-secondary" onclick="handleSignOut()" style="background: rgba(255,255,255,0.2); border: 1px solid white; color: white;">Sign Out</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Step 1: Job Description Analysis -->
+            <section class="section" id="job-analysis-section">
+                <h2>Step 1: Analyze Job Description</h2>
+                <div class="input-group">
+                    <label for="job-description">Paste the job description here:</label>
+                    <textarea 
+                        id="job-description" 
+                        placeholder="Paste the complete job description to analyze skills, requirements, and keywords..."
+                        rows="10"
+                    ></textarea>
+                    <button id="analyze-btn" class="btn btn-primary">Analyze Job Description</button>
+                </div>
+                <div id="analysis-results" class="analysis-results hidden"></div>
+                
+                <!-- ATS Score & Keywords -->
+                <div id="ats-analysis" class="ats-analysis hidden">
+                    <div class="ats-header">
+                        <h3>📈 ATS Compatibility Score</h3>
+                        <div class="score-container">
+                            <div id="ats-score-bar" class="score-bar"></div>
+                            <span id="ats-score-text">0%</span>
+                        </div>
+                    </div>
+                    <div id="missing-keywords-container" class="missing-keywords">
+                        <h4>🔍 Missing Keywords</h4>
+                        <div id="missing-keywords-list" class="keywords-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 2: Resume Builder -->
+            <section class="section" id="resume-builder-section">
+                <h2>Step 2: Build Your Resume</h2>
+                
+                <!-- Basic Information -->
+                <div class="resume-section">
+                    <div class="section-header">
+                        <h3>Basic Information</h3>
+                        <div class="template-selector">
+                            <label for="resume-template">Template:</label>
+                            <select id="resume-template" class="item-input" style="width: auto; margin-left: 10px;">
+                                <option value="modern">Modern (Two-column)</option>
+                                <option value="classic">Classic (Single-column)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="resume-name">Full Name *</label>
+                            <input type="text" id="resume-name" placeholder="John Doe" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="resume-title">Professional Title *</label>
+                            <input type="text" id="resume-title" placeholder="Software Engineer" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="resume-section">
+                    <h3>Contact Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="contact-email">Email</label>
+                            <input type="email" id="contact-email" placeholder="john.doe@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="contact-phone">Phone</label>
+                            <input type="tel" id="contact-phone" placeholder="+1 234 567 8900">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="contact-location">Location</label>
+                            <input type="text" id="contact-location" placeholder="City, Country">
+                        </div>
+                        <div class="form-group">
+                            <label for="contact-linkedin">LinkedIn</label>
+                            <input type="text" id="contact-linkedin" placeholder="/in/johndoe">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile/Summary -->
+                <div class="resume-section">
+                    <div class="section-header">
+                        <h3>Profile/Summary</h3>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="profile-enabled" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="profile-content" class="toggle-content">
+                        <div style="margin-bottom: 10px; display: flex; justify-content: flex-end;">
+                            <button type="button" class="btn btn-secondary btn-small" id="regenerate-summary-btn">🔄 Regenerate Summary</button>
+                        </div>
+                        <textarea id="profile-text" placeholder="Write a brief professional summary..." rows="4"></textarea>
+                    </div>
+                </div>
+
+                <!-- Skills/Expertise -->
+                <div class="resume-section">
+                    <div class="section-header">
+                        <h3>Skills/Expertise</h3>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="skills-enabled" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="skills-content" class="toggle-content">
+                        <div style="margin-bottom: 10px; display: flex; justify-content: flex-end;">
+                            <button type="button" class="btn btn-secondary btn-small" id="regenerate-skills-btn">🔄 Regenerate Skills</button>
+                        </div>
+                        <div id="skills-list"></div>
+                        <button type="button" class="btn btn-secondary" id="add-skill-btn">+ Add Skill</button>
+                    </div>
+                </div>
+
+                <!-- Languages -->
+                <div class="resume-section">
+                    <div class="section-header">
+                        <h3>Languages</h3>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="languages-enabled" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="languages-content" class="toggle-content">
+                        <div id="languages-list"></div>
+                        <button type="button" class="btn btn-secondary" id="add-language-btn">+ Add Language</button>
+                    </div>
+                </div>
+
+                <!-- Reference -->
+                <div class="resume-section">
+                    <div class="section-header">
+                        <h3>Reference</h3>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="reference-enabled">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="reference-content" class="toggle-content hidden">
+                        <textarea id="reference-text" placeholder="Name, Title, Company, Phone, Email..." rows="4"></textarea>
+                    </div>
+                </div>
+
+                <!-- Education -->
+                <div class="resume-section">
+                    <div class="section-header">
+                        <h3>Education</h3>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="education-enabled" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="education-content" class="toggle-content">
+                        <div id="education-list"></div>
+                        <button type="button" class="btn btn-secondary" id="add-education-btn">+ Add Education</button>
+                    </div>
+                </div>
+
+                <!-- Work Experience -->
+                <div class="resume-section">
+                    <div class="section-header">
+                        <h3>Work Experience</h3>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="experience-enabled" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="experience-content" class="toggle-content">
+                        <div style="margin-bottom: 10px; display: flex; justify-content: flex-end;">
+                            <button type="button" class="btn btn-secondary btn-small" id="regenerate-experience-btn">🔄 Optimize for Job</button>
+                        </div>
+                        <div id="experience-list"></div>
+                        <button type="button" class="btn btn-secondary" id="add-experience-btn">+ Add Experience</button>
+                    </div>
+                </div>
+
+                <!-- Achievements -->
+                <div class="resume-section">
+                    <div class="section-header">
+                        <h3>Achievements</h3>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="achievements-enabled" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="achievements-content" class="toggle-content">
+                        <div style="margin-bottom: 10px; display: flex; justify-content: flex-end;">
+                            <button type="button" class="btn btn-secondary btn-small" id="regenerate-achievements-btn">🔄 Regenerate Achievements</button>
+                        </div>
+                        <div id="achievements-list"></div>
+                        <button type="button" class="btn btn-secondary" id="add-achievement-btn">+ Add Achievement</button>
+                    </div>
+                </div>
+
+                <!-- Cover Letter Toggle -->
+                <div class="resume-section">
+                    <div class="section-header">
+                        <h3>Cover Letter</h3>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="cover-letter-enabled">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="cover-letter-content" class="toggle-content hidden">
+                        <div style="margin-bottom: 10px; display: flex; justify-content: flex-end;">
+                            <button type="button" class="btn btn-secondary btn-small" id="regenerate-cover-letter-btn">🔄 Regenerate Letter</button>
+                        </div>
+                        <textarea id="cover-letter-text" placeholder="Your cover letter will be automatically generated based on your profile and the job description, but you can edit it here..." rows="15" style="width: 100%;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Generate PDF Button -->
+                <div class="action-buttons">
+                    <button id="generate-pdf-btn" class="btn btn-primary btn-large">📥 Generate Resume PDF</button>
+                    <button id="generate-cover-letter-btn" class="btn btn-secondary btn-large">✉️ Generate Cover Letter PDF</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

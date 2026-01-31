@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - AI Resume Builder</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body class="landing-body">
+    <header class="landing-header">
+        <div class="landing-nav">
+            <div class="brand" onclick="window.location.href='/app'" style="cursor: pointer;">
+                <span class="brand-emoji">📄</span>
+                <span class="brand-name">AI Resume Builder</span>
+            </div>
+            <nav class="nav-links">
+                <!-- Links removed as requested -->
+            </nav>
+            <div class="nav-actions">
+                <span id="payment-user" class="status-pill">Not signed in</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="payment-main">
+        <section class="payment-card">
+            <h1>Complete your purchase</h1>
+            <p style="margin-bottom: 25px; font-size: 1.1rem; color: #4a5568;">Unlock the full power of AI to land your dream job faster.</p>
+
+            <div class="advantages-list" style="text-align: left; margin-bottom: 30px; background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; gap: 30px; align-items: center;">
+                <div style="flex: 1;">
+                    <h3 style="margin-bottom: 15px; color: #1a202c; font-size: 1.4rem;">Pro Advantages:</h3>
+                    <ul style="list-style: none; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px;">
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Unlimited ATS Analysis</strong></li>
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>STAR Method Optimization</strong></li>
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Classic & Modern Templates</strong></li>
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Priority AI Engine</strong></li>
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Unlimited PDF Exports</strong></li>
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Keyword Auto-Fix</strong></li>
+                    </ul>
+                </div>
+                <div style="flex: 0 0 200px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); text-align: center; border: 1px solid #edf2f7;">
+                    <div id="stripe-buy-button-container">
+                        <script async src="https://js.stripe.com/v3/buy-button.js"></script>
+                        <stripe-buy-button
+                            buy-button-id="buy_btn_1SvLI9FiJCDaNvF8O1TlNLg1"
+                            publishable-key="pk_live_51StsFSFiJCDaNvF8bZBWHJE1WVODOnAek3kmq7eyIaaTOO5A8HfGmdS3ejArloPzSjhnqJcgDLjFmQZ0YMey4MXt00wPqCXoq8"
+                        >
+                        </stripe-buy-button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="payment-message" class="status-pill muted"></div>
+        </section>
+
+        <section class="settings" style="display: none;">
+            <h2>Stripe setup</h2>
+            <p class="muted">Add your Stripe publishable key and price ID to enable checkout.</p>
+            <div class="settings-grid">
+                <div>
+                    <label for="stripe-publishable-key">Stripe publishable key</label>
+                    <input id="stripe-publishable-key" type="text" placeholder="pk_live_...">
+                </div>
+                <div>
+                    <label for="stripe-price-id">Stripe price ID</label>
+                    <input id="stripe-price-id" type="text" placeholder="price_...">
+                </div>
+                <button id="save-stripe-config" class="btn btn-secondary">Save</button>
+            </div>
+            <div id="stripe-config-status" class="config-status muted">Not configured yet.</div>
+        </section>
+    </main>
+
+    <script src="payment.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Canceled - AI Resume Builder</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="landing-body">
+    <main class="status-page">
+        <div class="status-card">
+            <h1>Payment canceled</h1>
+            <p>No charge was made. You can try again whenever you are ready.</p>
+            <div class="status-actions">
+                <a class="btn btn-primary" href="/payment">Try payment again</a>
+                <a class="btn btn-secondary" href="/landing">Back to landing</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        localStorage.setItem('payment_status', 'canceled');
+    </script>
+</body>
+</html>
