@@ -11,6 +11,20 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+function getOpenAIKey(req) {
+  const headerKey = req.headers['x-openai-key'];
+  return (headerKey && String(headerKey).trim()) || (process.env.OPENAI_API_KEY || '');
+}
+
+function getGeminiKey(req) {
+  const headerKey = req.headers['x-gemini-key'];
+  return (headerKey && String(headerKey).trim()) || (process.env.GEMINI_API_KEY || '');
+}
+
+function getStripeSecretKey() {
+  return process.env.STRIPE_SECRET_KEY || '';
+}
+
 // Middleware
 app.use(cors());
 app.use((req, res, next) => {
@@ -240,8 +254,8 @@ function guessJobTitleFromSignals(jobLower = '', extractedSkills = [], extracted
 app.post('/api/analyze-job', async (req, res) => {
   try {
     const { jobDescription, userName } = req.body;
-    const openaiKey = req.headers['x-openai-key'];
-    const geminiKey = req.headers['x-gemini-key'];
+    const openaiKey = getOpenAIKey(req);
+    const geminiKey = getGeminiKey(req);
     const undetectableKey = req.headers['x-undetectable-key'];
     
     if (!jobDescription) {
@@ -312,7 +326,7 @@ app.post('/api/analyze-job', async (req, res) => {
     }
 
     // --- APPROACH 2: OPENAI (Fallback) ---
-    if (!analysis && openaiKey && openaiKey.startsWith('sk-')) {
+    if (!analysis && openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('sk-proj-'))) {
       try {
         console.log('Attempting analysis with OpenAI...');
         const openai = new OpenAI({ apiKey: openaiKey });
@@ -412,8 +426,8 @@ app.post('/api/analyze-job', async (req, res) => {
 app.post('/api/regenerate-section', async (req, res) => {
   try {
     const { jobDescription, userName, sectionType, userContext } = req.body;
-    const openaiKey = req.headers['x-openai-key'];
-    const geminiKey = req.headers['x-gemini-key'];
+    const openaiKey = getOpenAIKey(req);
+    const geminiKey = getGeminiKey(req);
 
     if (!jobDescription) {
       return res.status(400).json({ error: 'Job description is required' });
@@ -424,7 +438,7 @@ app.post('/api/regenerate-section', async (req, res) => {
 
     const normalizedSkillNames = uniqueNonEmptyStrings((userContext?.skills || []).map(normalizeSkillName));
 
-    const dbgHasOpenAI = !!openaiKey && String(openaiKey).startsWith('sk-');
+    const dbgHasOpenAI = !!openaiKey && (String(openaiKey).startsWith('sk-') || String(openaiKey).startsWith('sk-proj-'));
     const dbgHasGemini = !!geminiKey;
     let dbgPathUsed = 'none';
 
@@ -544,7 +558,7 @@ app.post('/api/regenerate-section', async (req, res) => {
     }
 
     // Attempt with OpenAI (Fallback)
-    if (!content && openaiKey && openaiKey.startsWith('sk-')) {
+    if (!content && openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('sk-proj-'))) {
       try {
         const openai = new OpenAI({ apiKey: openaiKey });
         const completion = await openai.chat.completions.create({
@@ -640,8 +654,8 @@ app.post('/api/regenerate-section', async (req, res) => {
 app.post('/api/generate-summary', async (req, res) => {
   try {
     const { jobDescription, userName } = req.body;
-    const openaiKey = req.headers['x-openai-key'];
-    const geminiKey = req.headers['x-gemini-key'];
+    const openaiKey = getOpenAIKey(req);
+    const geminiKey = getGeminiKey(req);
 
     if (!jobDescription) {
       return res.status(400).json({ error: 'Job description is required' });
@@ -667,7 +681,7 @@ app.post('/api/generate-summary', async (req, res) => {
       } catch (e) { console.warn('Summary regeneration with Gemini failed'); }
     }
 
-    if (!summary && openaiKey && openaiKey.startsWith('sk-')) {
+    if (!summary && openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('sk-proj-'))) {
       try {
         const openai = new OpenAI({ apiKey: openaiKey });
         const completion = await openai.chat.completions.create({
@@ -696,8 +710,8 @@ app.post('/api/generate-summary', async (req, res) => {
 app.post('/api/humanize', async (req, res) => {
   try {
     const { content } = req.body;
-    const openaiKey = req.headers['x-openai-key'];
-    const geminiKey = req.headers['x-gemini-key'];
+    const openaiKey = getOpenAIKey(req);
+    const geminiKey = getGeminiKey(req);
     const undetectableKey = req.headers['x-undetectable-key'];
 
     if (!content) {

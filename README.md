@@ -42,6 +42,16 @@ A modern web application that analyzes job descriptions and helps you create cus
    npm run dev
    ```
 
+### Environment variables (recommended for deployment)
+
+Do **not** commit secrets to git. Instead, set these env vars on your machine / hosting provider:
+
+- `OPENAI_API_KEY`
+- `GEMINI_API_KEY`
+- `STRIPE_SECRET_KEY`
+
+For local development, copy `.env.example` to `.env` and fill in values (the `.env` file is ignored by git).
+
 2. **Open in Browser**
    - Navigate to `http://localhost:3000`
 
