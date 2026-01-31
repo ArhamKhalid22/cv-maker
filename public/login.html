@@ -7,7 +7,7 @@
     <title>Login - AI Resume Builder</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+    <!-- Social providers disabled (Google only) -->
     <style>
         body {
             background: #7c8bd4;
@@ -416,68 +416,10 @@
             toggleSignupForm(!showingSignup);
         });
 
-        // --- Facebook Auth ---
-        function initFacebookSDK() {
-            window.fbAsyncInit = function() {
-                FB.init({
-                    appId      : localStorage.getItem('facebook_app_id') || 'YOUR_FB_APP_ID',
-                    cookie     : true,
-                    xfbml      : true,
-                    version    : 'v18.0'
-                });
-            };
-        }
-
-        function handleFacebookSignIn() {
-            const appId = localStorage.getItem('facebook_app_id');
-            if (!appId || appId === 'YOUR_FB_APP_ID') {
-                showError('Please set your Facebook App ID on the /landing page.');
-                return;
-            }
-
-            FB.login(function(response) {
-                if (response.status === 'connected') {
-                    FB.api('/me', {fields: 'name,email,picture'}, function(profile) {
-                        localStorage.setItem('currentUser', JSON.stringify({
-                            id: profile.id,
-                            name: profile.name,
-                            email: profile.email || `${profile.id}@facebook.com`,
-                            provider: 'facebook',
-                            picture: profile.picture?.data?.url
-                        }));
-                        window.location.href = 'index.html';
-                    });
-                } else {
-                    showError('Facebook sign-in was cancelled or failed.');
-                }
-            }, {scope: 'public_profile,email'});
-        }
-
-        // --- LinkedIn Auth ---
-        function handleLinkedInSignIn() {
-            const clientId = localStorage.getItem('linkedin_client_id');
-            if (!clientId) {
-                showError('LinkedIn requires a Client ID. Set it on /landing.');
-                return;
-            }
-
-            const redirectUri = window.location.origin + '/login'; 
-            const state = btoa(Date.now().toString());
-            const scope = 'openid profile email';
-            
-            const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scope)}`;
-            
-            window.location.href = authUrl;
-        }
-
-        document.getElementById('facebook-login-btn').addEventListener('click', handleFacebookSignIn);
-        document.getElementById('linkedin-login-btn').addEventListener('click', handleLinkedInSignIn);
-
         window.addEventListener('load', () => {
             ensureGoogleClientId();
             initGoogleSignIn();
             waitForGoogleScript();
-            initFacebookSDK();
         });
     </script>
 </body>
