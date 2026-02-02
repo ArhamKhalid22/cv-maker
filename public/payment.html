@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://js.stripe.com/v3/"></script>
 </head>
+
 <body class="landing-body">
     <header class="landing-header">
         <div class="landing-nav">
@@ -26,26 +28,35 @@
     <main class="payment-main">
         <section class="payment-card">
             <h1>Complete your purchase</h1>
-            <p style="margin-bottom: 25px; font-size: 1.1rem; color: #4a5568;">Unlock the full power of AI to land your dream job faster.</p>
+            <p style="margin-bottom: 25px; font-size: 1.1rem; color: #4a5568;">Unlock the full power of AI to land your
+                dream job faster.</p>
 
-            <div class="advantages-list" style="text-align: left; margin-bottom: 30px; background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; gap: 30px; align-items: center;">
+            <div class="advantages-list"
+                style="text-align: left; margin-bottom: 30px; background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; gap: 30px; align-items: center;">
                 <div style="flex: 1;">
                     <h3 style="margin-bottom: 15px; color: #1a202c; font-size: 1.4rem;">Pro Advantages:</h3>
-                    <ul style="list-style: none; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px;">
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Unlimited ATS Analysis</strong></li>
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>STAR Method Optimization</strong></li>
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Classic & Modern Templates</strong></li>
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Priority AI Engine</strong></li>
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Unlimited PDF Exports</strong></li>
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Keyword Auto-Fix</strong></li>
+                    <ul
+                        style="list-style: none; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px;">
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅
+                            <strong>Unlimited ATS Analysis</strong></li>
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>STAR
+                                Method Optimization</strong></li>
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Classic
+                                & Modern Templates</strong></li>
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Priority
+                                AI Engine</strong></li>
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅
+                            <strong>Unlimited PDF Exports</strong></li>
+                        <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Keyword
+                                Auto-Fix</strong></li>
                     </ul>
                 </div>
-                <div style="flex: 0 0 200px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); text-align: center; border: 1px solid #edf2f7;">
-                    <div id="stripe-buy-button-container">
-                        <script async src="https://js.stripe.com/v3/buy-button.js"></script>
-                        <!-- Configured dynamically from localStorage in payment.js -->
-                        <stripe-buy-button id="stripe-buy-button"></stripe-buy-button>
-                    </div>
+                <div
+                    style="flex: 0 0 200px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); text-align: center; border: 1px solid #edf2f7;">
+                    <!-- Replaced with standard button -->
+                    <button id="stripe-checkout-btn" class="btn btn-primary"
+                        style="width: 100%; padding: 15px; font-size: 1.1rem; background: #667eea; border: none; color: white; border-radius: 8px; cursor: pointer;">Upgrade
+                        Now</button>
                 </div>
             </div>
 
@@ -72,4 +83,5 @@
 
     <script src="payment.js"></script>
 </body>
+
 </html>
