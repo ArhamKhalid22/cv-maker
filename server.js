@@ -758,7 +758,9 @@ app.post('/api/generate-pdf', (req, res) => {
     }
 
     // --- COVER LETTER PAGE ---
-    if (resumeData.coverLetter && (resumeData.coverLetter.enabled || resumeData.generateOnlyCoverLetter) && resumeData.coverLetter.content) {
+    // --- COVER LETTER PAGE (Disabled for combined PDF per user request) ---
+    // Only generate if explicitly asked for ONLY the cover letter
+    if (resumeData.coverLetter && resumeData.generateOnlyCoverLetter && resumeData.coverLetter.content) {
       if (!resumeData.generateOnlyCoverLetter) {
         doc.addPage({ margin: DEFAULT_MARGIN });
       } else {
