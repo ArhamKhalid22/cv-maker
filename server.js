@@ -1068,20 +1068,11 @@ function drawCoverLetterPage(doc, data) {
   // Divider line
   doc.moveTo(margin, margin + 60).lineTo(PAGE_WIDTH - margin, margin + 60).strokeColor('#bdc3c7').lineWidth(1).stroke();
 
-  // Date
-  const date = new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
-  doc.fontSize(10).font('Helvetica-Bold').fillColor('#2c3e50').text(date, margin, margin + 90);
-
   // Content
   doc.fontSize(10.5)
     .font('Helvetica')
     .fillColor('#2c3e50')
-    .text(data.coverLetter.content, margin, margin + 130, { width: width, lineGap: 6, align: 'justify' });
-
-  const closingY = margin + 130 + doc.heightOfString(data.coverLetter.content, { width: width, lineGap: 6 }) + 40;
-
-  doc.fontSize(10.5).text('Kind regards,', margin, closingY);
-  doc.font('Helvetica-Bold').text(data.name || '', margin, closingY + 20);
+    .text(data.coverLetter.content, margin, margin + 90, { width: width, lineGap: 6, align: 'justify' });
 }
 
 function drawSectionHeader(doc, title, x, y, sidebar = false) {
@@ -1109,7 +1100,7 @@ app.get('/api/download-pdf/:filename', (req, res) => {
 
 // Root route - landing page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 // Serve login page
@@ -1117,10 +1108,7 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// Serve landing page
-app.get('/landing', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
-});
+// Landing route removed
 
 // Serve main app
 app.get('/app', (req, res) => {
