@@ -75,7 +75,8 @@ async function startStripeCheckout() {
     const priceId = localStorage.getItem(STORAGE_KEYS.STRIPE_PRICE_ID);
 
     if (!publishableKey || !priceId) {
-        showMessage('Add a Stripe publishable key and price ID to continue.');
+        showMessage('Add a Stripe publishable key and price ID below to continue.');
+        document.querySelector('.settings').style.display = 'block';
         return;
     }
 
