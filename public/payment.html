@@ -38,7 +38,8 @@
                     <ul
                         style="list-style: none; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px;">
                         <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅
-                            <strong>Unlimited ATS Analysis</strong></li>
+                            <strong>Unlimited ATS Analysis</strong>
+                        </li>
                         <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>STAR
                                 Method Optimization</strong></li>
                         <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Classic
@@ -46,17 +47,20 @@
                         <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Priority
                                 AI Engine</strong></li>
                         <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅
-                            <strong>Unlimited PDF Exports</strong></li>
+                            <strong>Unlimited PDF Exports</strong>
+                        </li>
                         <li style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">✅ <strong>Keyword
                                 Auto-Fix</strong></li>
                     </ul>
                 </div>
                 <div
                     style="flex: 0 0 200px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); text-align: center; border: 1px solid #edf2f7;">
-                    <!-- Replaced with standard button -->
-                    <button id="stripe-checkout-btn" class="btn btn-primary"
-                        style="width: 100%; padding: 15px; font-size: 1.1rem; background: #667eea; border: none; color: white; border-radius: 8px; cursor: pointer;">Upgrade
-                        Now</button>
+                    <div id="stripe-buy-button-container">
+                        <script async src="https://js.stripe.com/v3/buy-button.js"></script>
+                        <stripe-buy-button buy-button-id="buy_btn_1SwJcBFiJCDaNvF8ka2RH4En"
+                            publishable-key="pk_live_51StsFSFiJCDaNvF8bZBWHJE1WVODOnAek3kmq7eyIaaTOO5A8HfGmdS3ejArloPzSjhnqJcgDLjFmQZ0YMey4MXt00wPqCXoq8">
+                        </stripe-buy-button>
+                    </div>
                 </div>
             </div>
 

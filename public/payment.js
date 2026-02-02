@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateUserStatus();
 
     saveStripeBtn.addEventListener('click', saveStripeConfig);
-    document.getElementById('stripe-checkout-btn').addEventListener('click', startStripeCheckout);
+    // document.getElementById('stripe-checkout-btn').addEventListener('click', startStripeCheckout);
 
     // Configure Stripe Buy Button dynamically (prevents committing live keys)
     // Stripe Buy Button logic removed
