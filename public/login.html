@@ -365,7 +365,7 @@
         function promptGoogleSignIn() {
             const clientId = localStorage.getItem('google_client_id');
             if (!clientId) {
-                showError('Google Client ID missing. Set it on /landing.');
+                showError('Google Client ID missing. Please check configuration.');
                 return;
             }
             if (!window.google || !google.accounts || !google.accounts.id) {

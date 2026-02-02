@@ -517,10 +517,11 @@ async function regenerateSection(sectionType) {
     const openaiKey = localStorage.getItem(STORAGE_KEYS.OPENAI_API_KEY);
     const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
     
-    if (!openaiKey && !geminiKey) {
-        alert('Please add your OpenAI or Gemini API Key in the Developer setup first.');
-        return;
-    }
+    // Relaxed check: Allow request to proceed even if no local keys (Server might have env vars)
+    // if (!openaiKey && !geminiKey) {
+    //     alert('Please add your OpenAI or Gemini API Key in the Developer setup first.');
+    //     return;
+    // }
 
     const originalText = btn.innerHTML;
     btn.disabled = true;
@@ -636,10 +637,11 @@ async function humanizeCoverLetter() {
     const openaiKey = localStorage.getItem(STORAGE_KEYS.OPENAI_API_KEY);
     const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
     
-    if (!openaiKey && !geminiKey) {
-        alert('Please add your OpenAI or Gemini API Key in the Developer setup first.');
-        return;
-    }
+    // Relaxed check: Allow request to proceed (Server might have env vars)
+    // if (!openaiKey && !geminiKey) {
+    //     alert('Please add your OpenAI or Gemini API Key in the Developer setup first.');
+    //     return;
+    // }
     
     humanizeBtn.disabled = true;
     humanizeBtn.innerHTML = 'Humanizing... <span class="loading"></span>';
@@ -687,11 +689,15 @@ async function analyzeJobDescription() {
     const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
     const undetectableKey = localStorage.getItem(STORAGE_KEYS.UNDETECTABLE_API_KEY);
     
+    // Relaxed check: Allow request to proceed even if no local keys. 
+    // The server will use process.env keys if headers are missing.
+    /* 
     if (!openaiKey && !geminiKey) {
         alert('Please add your OpenAI or Gemini API Key in the Developer setup on the landing page first.');
         window.location.href = '/landing';
         return;
     }
+    */
 
     analyzeBtn.disabled = true;
     analyzeBtn.innerHTML = 'Analyzing with AI... <span class="loading"></span>';
