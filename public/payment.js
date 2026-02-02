@@ -66,35 +66,16 @@ async function startStripeCheckout() {
         return;
     }
 
-    if (typeof Stripe !== 'function') {
-        showMessage('Stripe failed to load. Check your connection and disable ad blockers.');
-        return;
-    }
+    // Direct redirection to the provided Stripe Payment Link
+    // You can also make this configurable via localStorage check if you want dynamic links later
+    const stripePaymentLink = 'https://buy.stripe.com/00wfZhddE8ZWbPjaplbjW02';
 
-    const publishableKey = localStorage.getItem(STORAGE_KEYS.STRIPE_PUBLISHABLE_KEY);
-    const priceId = localStorage.getItem(STORAGE_KEYS.STRIPE_PRICE_ID);
+    // Optional: Pre-fill email if supported by the link (Stripe Payment Links usually handle this via query param ?prefilled_email=...)
+    const finalUrl = currentUser.email
+        ? `${stripePaymentLink}?prefilled_email=${encodeURIComponent(currentUser.email)}`
+        : stripePaymentLink;
 
-    if (!publishableKey || !priceId) {
-        showMessage('Add a Stripe publishable key and price ID below to continue.');
-        document.querySelector('.settings').style.display = 'block';
-        return;
-    }
-
-    const stripe = Stripe(publishableKey);
-    const origin = window.location.origin;
-
-    const { error } = await stripe.redirectToCheckout({
-        lineItems: [{ price: priceId, quantity: 1 }],
-        mode: 'payment',
-        successUrl: `${origin}/payment-success`,
-        cancelUrl: `${origin}/payment-cancel`,
-        customerEmail: currentUser.email || undefined
-    });
-
-    if (error) {
-        console.error('Stripe checkout error:', error);
-        showMessage(error.message || 'Unable to start checkout. Please try again.');
-    }
+    window.location.href = finalUrl;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
