@@ -5,16 +5,13 @@ const path = require('path');
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const natural = require('natural');
-const { OpenAI } = require('openai');
+// const { OpenAI } = require('openai'); // Removed per user request
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-function getOpenAIKey(req) {
-  const headerKey = req.headers['x-openai-key'];
-  return (headerKey && String(headerKey).trim()) || (process.env.OPENAI_API_KEY || '');
-}
+// OpenAI Key helper removed
 
 function getGeminiKey(req) {
   const headerKey = req.headers['x-gemini-key'];
@@ -138,7 +135,7 @@ function generateSuggestedCoverLetter(title, skills, education, userName = "[You
     `I’m happy to speak further and share more detail on the work I’ve done.`
   ];
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-  
+
   return `Dear Hiring Manager,
 
 ${pick(hooks)} ${pick(valueProps)}
@@ -155,28 +152,28 @@ ${userName}`;
 
 function generateRecommendations(skills, keywords) {
   const recommendations = [];
-  
+
   if (skills.length > 0) {
     recommendations.push({
       type: 'skills',
       message: `Highlight these skills in your resume: ${skills.slice(0, 5).join(', ')}`
     });
   }
-  
+
   if (keywords.some(k => k.category === 'technical')) {
     recommendations.push({
       type: 'technical',
       message: 'Include a Technical Skills section with relevant technologies'
     });
   }
-  
+
   if (keywords.some(k => k.category === 'management')) {
     recommendations.push({
       type: 'leadership',
       message: 'Emphasize leadership and project management experience'
     });
   }
-  
+
   return recommendations;
 }
 
@@ -254,16 +251,16 @@ function guessJobTitleFromSignals(jobLower = '', extractedSkills = [], extracted
 app.post('/api/analyze-job', async (req, res) => {
   try {
     const { jobDescription, userName } = req.body;
-    const openaiKey = getOpenAIKey(req);
+    // const openaiKey = getOpenAIKey(req); // Removed
     const geminiKey = getGeminiKey(req);
     const undetectableKey = req.headers['x-undetectable-key'];
-    
+
     if (!jobDescription) {
       return res.status(400).json({ error: 'Job description is required' });
     }
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6953cdac-8acd-439e-a8c6-252d8b296cad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'server.js:/api/analyze-job:entry',message:'Analyze request received',data:{hasOpenAIKey:!!req.headers['x-openai-key'],hasGeminiKey:!!req.headers['x-gemini-key'],hasUndetectableKey:!!req.headers['x-undetectable-key'],jobDescriptionLen:String(jobDescription||'').length,hasUserName:!!userName},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/6953cdac-8acd-439e-a8c6-252d8b296cad', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: 'debug-session', runId: 'pre-fix', hypothesisId: 'H1', location: 'server.js:/api/analyze-job:entry', message: 'Analyze request received', data: { hasOpenAIKey: !!req.headers['x-openai-key'], hasGeminiKey: !!req.headers['x-gemini-key'], hasUndetectableKey: !!req.headers['x-undetectable-key'], jobDescriptionLen: String(jobDescription || '').length, hasUserName: !!userName }, timestamp: Date.now() }) }).catch(() => { });
     // #endregion agent log
 
     let analysis = null;
@@ -325,22 +322,19 @@ app.post('/api/analyze-job', async (req, res) => {
       }
     }
 
-    // --- APPROACH 2: OPENAI (Fallback) ---
+    // --- APPROACH 2: OPENAI (Removed) ---
+    // User requested to remove OpenAI support.
+    /*
     if (!analysis && openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('sk-proj-'))) {
-      try {
-        console.log('Attempting analysis with OpenAI...');
-        const openai = new OpenAI({ apiKey: openaiKey });
-        // ... (rest of OpenAI logic)
-      } catch (aiError) {
-        console.warn('OpenAI Analysis failed:', aiError.message);
-      }
+       ...
     }
+    */
 
     if (!analysis) {
       // --- APPROACH 3: LOCAL FALLBACK ---
       const tokenizer = new natural.WordTokenizer();
       const jobLower = jobDescription.toLowerCase();
-      
+
       const skillKeywords = {
         'technical': ['javascript', 'python', 'java', 'react', 'node', 'sql', 'html', 'css', 'api', 'git', 'docker', 'aws', 'cloud'],
         'soft': ['communication', 'leadership', 'teamwork', 'problem-solving', 'analytical', 'creative', 'organized', 'detail-oriented'],
@@ -349,7 +343,7 @@ app.post('/api/analyze-job', async (req, res) => {
 
       const extractedSkills = [];
       const extractedKeywords = [];
-      
+
       Object.keys(skillKeywords).forEach(category => {
         skillKeywords[category].forEach(skill => {
           if (jobLower.includes(skill.toLowerCase())) {
@@ -412,7 +406,7 @@ app.post('/api/analyze-job', async (req, res) => {
     }
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6953cdac-8acd-439e-a8c6-252d8b296cad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H4',location:'server.js:/api/analyze-job:exit',message:'Analyze responding',data:{hasAnalysis:!!analysis,suggestedTitle:analysis?.suggestedTitle||null,coverLetterHasProfessionalCandidate:/Professional Candidate/i.test(String(analysis?.suggestedCoverLetter||'')),note:analysis?.note||null},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/6953cdac-8acd-439e-a8c6-252d8b296cad', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: 'debug-session', runId: 'pre-fix', hypothesisId: 'H4', location: 'server.js:/api/analyze-job:exit', message: 'Analyze responding', data: { hasAnalysis: !!analysis, suggestedTitle: analysis?.suggestedTitle || null, coverLetterHasProfessionalCandidate: /Professional Candidate/i.test(String(analysis?.suggestedCoverLetter || '')), note: analysis?.note || null }, timestamp: Date.now() }) }).catch(() => { });
     // #endregion agent log
 
     res.json(analysis);
@@ -426,7 +420,7 @@ app.post('/api/analyze-job', async (req, res) => {
 app.post('/api/regenerate-section', async (req, res) => {
   try {
     const { jobDescription, userName, sectionType, userContext } = req.body;
-    const openaiKey = getOpenAIKey(req);
+    // const openaiKey = getOpenAIKey(req); // Removed
     const geminiKey = getGeminiKey(req);
 
     if (!jobDescription) {
@@ -443,18 +437,18 @@ app.post('/api/regenerate-section', async (req, res) => {
     let dbgPathUsed = 'none';
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6953cdac-8acd-439e-a8c6-252d8b296cad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1',location:'server.js:/api/regenerate-section:entry',message:'Regenerate request received',data:{sectionType,jobDescriptionLen:String(jobDescription||'').length,hasUserName:!!userName,hasGeminiKey:dbgHasGemini,hasOpenAIKey:dbgHasOpenAI},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/6953cdac-8acd-439e-a8c6-252d8b296cad', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: 'debug-session', runId: 'pre-fix', hypothesisId: 'H1', location: 'server.js:/api/regenerate-section:entry', message: 'Regenerate request received', data: { sectionType, jobDescriptionLen: String(jobDescription || '').length, hasUserName: !!userName, hasGeminiKey: dbgHasGemini, hasOpenAIKey: dbgHasOpenAI }, timestamp: Date.now() }) }).catch(() => { });
     // #endregion agent log
-    
+
     // Format user context for the prompt
     const skillsContext = normalizedSkillNames.length > 0 ? `My skills include: ${normalizedSkillNames.join(', ')}.` : '';
-    const experienceContext = userContext?.experience?.length > 0 ? 
+    const experienceContext = userContext?.experience?.length > 0 ?
       `My experience includes: ${userContext.experience.map(e => `${e.position} at ${e.company}`).join(', ')}.` : '';
 
     let prompt = "";
     let isJsonResponse = false;
 
-    switch(sectionType) {
+    switch (sectionType) {
       case 'summary':
         prompt = `Write an ATS-optimized, professional summary for ${namePlaceholder} specifically tailored to this job description: ${jobDescription}. 
         ${skillsContext} ${experienceContext}
@@ -491,7 +485,7 @@ app.post('/api/regenerate-section', async (req, res) => {
           "Use a professional, humble tone focusing on my dedication and work ethic."
         ];
         const randomFocus = varietyPrompts[Math.floor(Math.random() * varietyPrompts.length)];
-        
+
         prompt = `Write a UNIQUE, professional, and human-sounding cover letter for ${namePlaceholder} tailored specifically to this job description.
         
         CRITICAL: Identify the TARGET JOB TITLE from the job description. Do NOT use "Professional Candidate". If you cannot find a title, use "the advertised position".
@@ -552,28 +546,17 @@ app.post('/api/regenerate-section', async (req, res) => {
           }
           if (content) dbgPathUsed = 'gemini';
         }
-      } catch (e) { 
-        console.warn(`Regeneration of ${sectionType} with Gemini failed:`, e.message); 
+      } catch (e) {
+        console.warn(`Regeneration of ${sectionType} with Gemini failed:`, e.message);
       }
     }
 
-    // Attempt with OpenAI (Fallback)
-    if (!content && openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('sk-proj-'))) {
-      try {
-        const openai = new OpenAI({ apiKey: openaiKey });
-        const completion = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: [
-            { role: "system", content: "You are a professional career coach and resume expert." },
-            { role: "user", content: prompt }
-          ],
-          response_format: isJsonResponse ? { type: "json_object" } : undefined
-        });
-        const result = completion.choices[0].message.content;
-        content = isJsonResponse ? JSON.parse(result).content : result;
-        if (content) dbgPathUsed = 'openai';
-      } catch (e) { console.warn(`Regeneration of ${sectionType} with OpenAI failed`); }
+    // Attempt with OpenAI (Removed)
+    /*
+    if (!content && openaiKey && ...) {
+       ...
     }
+    */
 
     // --- APPROACH 3: LOCAL FALLBACK (If all AI fails or limits reached) ---
     if (!content) {
@@ -587,12 +570,12 @@ app.post('/api/regenerate-section', async (req, res) => {
         guessJobTitleFromSignals(jobDescription, skills, []) ||
         "the advertised position";
 
-      switch(sectionType) {
+      switch (sectionType) {
         case 'summary':
           content = `Results-oriented professional with a strong background in ${skills.slice(0, 3).join(', ')}. Proven track record of delivering high-quality results and contributing to team success through dedication and expertise in ${title}.`;
           break;
         case 'skills':
-          content = skills.length > 0 ? 
+          content = skills.length > 0 ?
             skills.slice(0, 5).map(s => ({ name: s, description: `Hands-on experience using ${s} in real tasks/projects.` })) :
             [
               { name: "Problem Solving", description: "Analytical approach to complex challenges" },
@@ -638,7 +621,7 @@ app.post('/api/regenerate-section', async (req, res) => {
     }
 
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6953cdac-8acd-439e-a8c6-252d8b296cad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2',location:'server.js:/api/regenerate-section:exit',message:'Regenerate responding',data:{sectionType,pathUsed:dbgPathUsed,contentType:typeof content,contentLen:typeof content==='string'?content.length:Array.isArray(content)?content.length:null,contentHasProfessionalCandidate:/Professional Candidate/i.test(String(content||''))},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/6953cdac-8acd-439e-a8c6-252d8b296cad', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: 'debug-session', runId: 'pre-fix', hypothesisId: 'H2', location: 'server.js:/api/regenerate-section:exit', message: 'Regenerate responding', data: { sectionType, pathUsed: dbgPathUsed, contentType: typeof content, contentLen: typeof content === 'string' ? content.length : Array.isArray(content) ? content.length : null, contentHasProfessionalCandidate: /Professional Candidate/i.test(String(content || '')) }, timestamp: Date.now() }) }).catch(() => { });
     // #endregion agent log
 
     res.json({ content });
@@ -654,7 +637,7 @@ app.post('/api/regenerate-section', async (req, res) => {
 app.post('/api/generate-summary', async (req, res) => {
   try {
     const { jobDescription, userName } = req.body;
-    const openaiKey = getOpenAIKey(req);
+    // const openaiKey = getOpenAIKey(req); // Removed
     const geminiKey = getGeminiKey(req);
 
     if (!jobDescription) {
@@ -681,19 +664,10 @@ app.post('/api/generate-summary', async (req, res) => {
       } catch (e) { console.warn('Summary regeneration with Gemini failed'); }
     }
 
-    if (!summary && openaiKey && (openaiKey.startsWith('sk-') || openaiKey.startsWith('sk-proj-'))) {
-      try {
-        const openai = new OpenAI({ apiKey: openaiKey });
-        const completion = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: [
-            { role: "system", content: "You are a professional career coach. Write a concise, 3-4 sentence professional summary for a resume based on the job description. Be direct and avoid cliches. Write from the first-person perspective." },
-            { role: "user", content: `Write a summary for ${namePlaceholder} based on this job: ${jobDescription}` }
-          ]
-        });
-        summary = completion.choices[0].message.content;
-      } catch (e) { console.warn('Summary regeneration with OpenAI failed'); }
-    }
+    // OpenAI summary generation removed
+    /*
+    if (!summary && openaiKey ...) { ... }
+    */
 
     if (!summary) {
       summary = "Dedicated professional with experience aligned with the requirements of this role, focused on achieving excellence and driving value.";
@@ -710,7 +684,7 @@ app.post('/api/generate-summary', async (req, res) => {
 app.post('/api/humanize', async (req, res) => {
   try {
     const { content } = req.body;
-    const openaiKey = getOpenAIKey(req);
+    // const openaiKey = getOpenAIKey(req); // Removed
     const geminiKey = getGeminiKey(req);
     const undetectableKey = req.headers['x-undetectable-key'];
 
@@ -835,7 +809,7 @@ function drawClassicCVPage(doc, data) {
 
   sections.forEach(section => {
     if (!isSectionActive(section.data)) return;
-    
+
     y = drawClassicSectionHeader(doc, section.title, DEFAULT_MARGIN, y, width);
     doc.font('Helvetica').fontSize(10).fillColor('#2c3e50');
 
@@ -1065,7 +1039,7 @@ function drawSidebarHeader(doc, title, x, y) {
 function drawModernSectionHeader(doc, title, x, y, timelineX) {
   // Draw circular icon on the timeline
   doc.circle(timelineX, y + 7, 8).fill('#2c3e50');
-  
+
   doc.fontSize(12).font('Helvetica-Bold').fillColor('#2c3e50').text(title, x, y);
   doc.moveTo(x, y + 16).lineTo(x + 380, y + 16).strokeColor('#bdc3c7').lineWidth(0.5).stroke();
 }
@@ -1078,7 +1052,7 @@ function drawSidebarHeader(doc, title, x, y) {
 function drawCoverLetterPage(doc, data) {
   const margin = 50;
   const width = PAGE_WIDTH - (margin * 2);
-  
+
   // Header matching resume style
   doc.fontSize(24).font('Helvetica-Bold').fillColor('#2c3e50').text((data.name || 'YOUR NAME').toUpperCase(), margin, margin);
   doc.fontSize(12).font('Helvetica').fillColor('#7f8c8d').text((data.title || '').toUpperCase(), margin, margin + 30);
@@ -1100,12 +1074,12 @@ function drawCoverLetterPage(doc, data) {
 
   // Content
   doc.fontSize(10.5)
-     .font('Helvetica')
-     .fillColor('#2c3e50')
-     .text(data.coverLetter.content, margin, margin + 130, { width: width, lineGap: 6, align: 'justify' });
-  
+    .font('Helvetica')
+    .fillColor('#2c3e50')
+    .text(data.coverLetter.content, margin, margin + 130, { width: width, lineGap: 6, align: 'justify' });
+
   const closingY = margin + 130 + doc.heightOfString(data.coverLetter.content, { width: width, lineGap: 6 }) + 40;
-  
+
   doc.fontSize(10.5).text('Kind regards,', margin, closingY);
   doc.font('Helvetica-Bold').text(data.name || '', margin, closingY + 20);
 }
@@ -1120,7 +1094,7 @@ function drawSectionHeader(doc, title, x, y, sidebar = false) {
 app.get('/api/download-pdf/:filename', (req, res) => {
   const filename = req.params.filename;
   const filepath = path.join(pdfsDir, filename);
-  
+
   if (fs.existsSync(filepath)) {
     res.download(filepath, filename, (err) => {
       if (err) {
