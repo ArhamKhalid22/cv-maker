@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
-const natural = require('natural');
+// const natural = require('natural'); // Removed to fix Vercel crash (heavy dependency)
 // const { OpenAI } = require('openai'); // Removed per user request
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
@@ -1134,3 +1134,8 @@ app.get('/payment-cancel', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
+// Calculate metrics for user engagement (Stubbed to prevent crash if natural was used here)
+// function calculateRelevance(text1, text2) { return 0.5; }
+
+module.exports = app; // Required for Vercel Serverless Functions
