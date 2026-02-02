@@ -34,7 +34,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
 // Store for generated PDFs
-const pdfsDir = path.join(__dirname, 'generated-pdfs');
+// Store for generated PDFs (Use /tmp for serverless/readonly envs)
+const os = require('os');
+const pdfsDir = path.join(os.tmpdir(), 'generated-pdfs');
 if (!fs.existsSync(pdfsDir)) {
   fs.mkdirSync(pdfsDir);
 }
