@@ -68,8 +68,8 @@ const STORAGE_KEYS = {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    // Check authentication first
-    checkAuthentication();
+    // Check authentication first (disabled for now)
+    // checkAuthentication();
 
     loadSavedData();
     initializeEventListeners();
@@ -214,8 +214,8 @@ function setupAutoSave() {
 }
 
 function loadSavedData() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-    if (!currentUser) return;
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    // if (!currentUser) return; // Allow loading even if no user exists
 
     // Load contact info
     const savedContact = localStorage.getItem(STORAGE_KEYS.CONTACT);
