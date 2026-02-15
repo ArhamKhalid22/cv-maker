@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="origin-when-cross-origin">
     <title>Login - AI Resume Builder</title>
+    <script>
+        // Bypass auth: redirect to app immediately
+        window.location.href = 'app.html';
+    </script>
     <link rel="stylesheet" href="styles.css">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Social providers disabled (Google only) -->
@@ -16,6 +21,7 @@
             align-items: center;
             justify-content: center;
         }
+
         .login-card {
             background: #f8fafc;
             border-radius: 14px;
@@ -24,6 +30,7 @@
             box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
             border: 2px solid #90caf9;
         }
+
         .login-card h2 {
             text-align: center;
             font-size: 18px;
@@ -31,15 +38,18 @@
             margin-bottom: 20px;
             color: #0f172a;
         }
+
         .login-group {
             margin-bottom: 14px;
         }
+
         .login-group label {
             display: block;
             font-size: 13px;
             color: #475569;
             margin-bottom: 6px;
         }
+
         .login-group input {
             width: 100%;
             padding: 10px 12px;
@@ -48,6 +58,7 @@
             font-size: 14px;
             background: #fff;
         }
+
         .row-between {
             display: flex;
             align-items: center;
@@ -56,10 +67,12 @@
             color: #64748b;
             margin-bottom: 12px;
         }
+
         .row-between a {
             color: #64748b;
             text-decoration: none;
         }
+
         .login-btn {
             width: 100%;
             padding: 10px;
@@ -71,6 +84,7 @@
             cursor: pointer;
             margin-bottom: 10px;
         }
+
         .divider {
             display: flex;
             align-items: center;
@@ -79,6 +93,7 @@
             font-size: 12px;
             margin: 12px 0 10px;
         }
+
         .divider::before,
         .divider::after {
             content: "";
@@ -86,6 +101,7 @@
             height: 1px;
             background: #e2e8f0;
         }
+
         .social-row {
             display: flex;
             flex-direction: column;
@@ -93,11 +109,13 @@
             gap: 12px;
             margin-bottom: 12px;
         }
+
         .social-btn-group {
             display: flex;
             justify-content: center;
             gap: 12px;
         }
+
         .social-btn {
             width: 36px;
             height: 36px;
@@ -107,31 +125,37 @@
             font-weight: 700;
             cursor: pointer;
         }
+
         .social-btn.google {
             color: #ef4444;
             background: url('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg') no-repeat center;
             background-size: 20px;
         }
+
         .social-btn.facebook {
             color: #2563eb;
             background: url('https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png') no-repeat center;
             background-size: 20px;
         }
+
         .social-btn.linkedin {
             color: #0ea5e9;
             background: url('https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png') no-repeat center;
             background-size: 20px;
         }
+
         .signup-link {
             text-align: center;
             font-size: 12px;
             color: #64748b;
         }
+
         .signup-link a {
             color: #0f172a;
             font-weight: 600;
             text-decoration: none;
         }
+
         .error-message {
             background: #fee2e2;
             color: #991b1b;
@@ -141,14 +165,17 @@
             display: none;
             margin-bottom: 10px;
         }
+
         .error-message.show {
             display: block;
         }
+
         .form-hidden {
             display: none;
         }
     </style>
 </head>
+
 <body>
     <div class="login-card">
         <h2>LOGIN</h2>
@@ -165,7 +192,8 @@
             </div>
             <div class="row-between">
                 <label><input type="checkbox" id="remember-me"> Remember me?</label>
-                <a href="#" onclick="showError('Password reset is not available yet.'); return false;">Forgot Password?</a>
+                <a href="#" onclick="showError('Password reset is not available yet.'); return false;">Forgot
+                    Password?</a>
             </div>
             <button type="submit" class="login-btn">LOGIN</button>
         </form>
@@ -193,7 +221,8 @@
         <div class="divider">OR</div>
         <div class="social-row">
             <div class="social-btn-group">
-                <button class="social-btn google" id="google-login-btn" aria-label="Google" onclick="promptGoogleSignIn()"></button>
+                <button class="social-btn google" id="google-login-btn" aria-label="Google"
+                    onclick="promptGoogleSignIn()"></button>
             </div>
             <div id="google-button-container" style="display: none;"></div>
         </div>
@@ -350,11 +379,11 @@
             if (container) {
                 google.accounts.id.renderButton(
                     container,
-                    { 
-                        theme: "outline", 
-                        size: "large", 
+                    {
+                        theme: "outline",
+                        size: "large",
                         text: "signin_with",
-                        shape: "rectangular" 
+                        shape: "rectangular"
                     }
                 );
             }
@@ -423,4 +452,5 @@
         });
     </script>
 </body>
+
 </html>
