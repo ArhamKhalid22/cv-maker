@@ -1,3 +1,5 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
 // Global state
 let analysisResults = null;
 let skillCounter = 0;
@@ -68,7 +70,7 @@ const STORAGE_KEYS = {
 document.addEventListener('DOMContentLoaded', () => {
     // Check authentication first
     checkAuthentication();
-    
+
     loadSavedData();
     initializeEventListeners();
     setupAutoSave();
@@ -90,13 +92,13 @@ function checkPendingJobDescription() {
 
 function checkAuthentication() {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-    
+
     if (!currentUser) {
         // No user logged in, redirect to login page
         window.location.href = 'login.html';
         return;
     }
-    
+
     // User is logged in, show user info
     displayUserInfo(currentUser);
 }
@@ -104,7 +106,7 @@ function checkAuthentication() {
 function displayUserInfo(user) {
     const userInfoDiv = document.getElementById('user-info');
     const userNameSpan = document.getElementById('user-name');
-    
+
     if (userInfoDiv && userNameSpan) {
         userNameSpan.textContent = `Welcome, ${user.name || user.email}`;
         userInfoDiv.style.display = 'block';
@@ -115,7 +117,7 @@ function handleSignOut() {
     if (confirm('Are you sure you want to sign out?')) {
         // Clear current user session
         localStorage.removeItem('currentUser');
-        
+
         // Redirect to login page
         window.location.href = 'login.html';
     }
@@ -124,20 +126,20 @@ function handleSignOut() {
 function initializeEventListeners() {
     // Job analysis
     document.getElementById('analyze-btn').addEventListener('click', analyzeJobDescription);
-    
+
     // Regenerate buttons
     const regenerateSummaryBtn = document.getElementById('regenerate-summary-btn');
     if (regenerateSummaryBtn) regenerateSummaryBtn.addEventListener('click', () => regenerateSection('summary'));
-    
+
     const regenerateSkillsBtn = document.getElementById('regenerate-skills-btn');
     if (regenerateSkillsBtn) regenerateSkillsBtn.addEventListener('click', () => regenerateSection('skills'));
-    
+
     const regenerateExperienceBtn = document.getElementById('regenerate-experience-btn');
     if (regenerateExperienceBtn) regenerateExperienceBtn.addEventListener('click', () => regenerateSection('experience'));
-    
+
     const regenerateAchievementsBtn = document.getElementById('regenerate-achievements-btn');
     if (regenerateAchievementsBtn) regenerateAchievementsBtn.addEventListener('click', () => regenerateSection('achievements'));
-    
+
     const regenerateCoverLetterBtn = document.getElementById('regenerate-cover-letter-btn');
     if (regenerateCoverLetterBtn) regenerateCoverLetterBtn.addEventListener('click', () => regenerateSection('cover-letter'));
 
@@ -150,20 +152,20 @@ function initializeEventListeners() {
     document.getElementById('languages-enabled').addEventListener('change', toggleSection);
     document.getElementById('reference-enabled').addEventListener('change', toggleSection);
     document.getElementById('cover-letter-enabled').addEventListener('change', toggleSection);
-    
+
     // Add items
     document.getElementById('add-skill-btn').addEventListener('click', () => addSkillItem());
     document.getElementById('add-language-btn').addEventListener('click', () => addLanguageItem());
     document.getElementById('add-education-btn').addEventListener('click', () => addEducationItem());
     document.getElementById('add-experience-btn').addEventListener('click', () => addExperienceItem());
     document.getElementById('add-achievement-btn').addEventListener('click', () => addAchievementItem());
-    
+
     // Auto-save indicators
     const inputs = document.querySelectorAll('input, textarea, select');
     inputs.forEach(input => {
         input.addEventListener('input', () => showSaveIndicator());
     });
-    
+
     // Generate PDF
     // IMPORTANT: don't pass the click event object into generatePDF()
     document.getElementById('generate-pdf-btn').addEventListener('click', () => generatePDF(false));
@@ -180,9 +182,9 @@ function showSaveIndicator() {
         indicator.innerHTML = '<div class="loading-spinner"></div> Saving...';
         document.body.appendChild(indicator);
     }
-    
+
     indicator.classList.add('show');
-    
+
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
         indicator.innerHTML = '✅ Saved';
@@ -214,7 +216,7 @@ function setupAutoSave() {
 function loadSavedData() {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
     if (!currentUser) return;
-    
+
     // Load contact info
     const savedContact = localStorage.getItem(STORAGE_KEYS.CONTACT);
     if (savedContact) {
@@ -233,7 +235,7 @@ function loadSavedData() {
             document.getElementById('contact-email').value = currentUser.email;
         }
     }
-    
+
     // Load name and title
     const savedName = localStorage.getItem(STORAGE_KEYS.NAME);
     if (savedName) {
@@ -241,7 +243,7 @@ function loadSavedData() {
     } else if (currentUser.name) {
         document.getElementById('resume-name').value = currentUser.name;
     }
-    
+
     const savedTitle = localStorage.getItem(STORAGE_KEYS.TITLE);
     if (savedTitle) {
         const isPlaceholderTitle = /^(relevant role|target role|the advertised position)$/i.test(savedTitle.trim()) || /professional candidate/i.test(savedTitle);
@@ -252,7 +254,7 @@ function loadSavedData() {
             document.getElementById('resume-title').value = savedTitle;
         }
     }
-    
+
     // Load education
     const savedEducation = localStorage.getItem(STORAGE_KEYS.EDUCATION);
     if (savedEducation) {
@@ -273,7 +275,7 @@ function loadSavedData() {
     } else {
         addEducationItem();
     }
-    
+
     // Load experience
     const savedExperience = localStorage.getItem(STORAGE_KEYS.EXPERIENCE);
     if (savedExperience) {
@@ -294,7 +296,7 @@ function loadSavedData() {
     } else {
         addExperienceItem();
     }
-    
+
     // Load achievements
     const savedAchievements = localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS);
     if (savedAchievements) {
@@ -315,7 +317,7 @@ function loadSavedData() {
     } else {
         addAchievementItem();
     }
-    
+
     // Load languages
     const savedLanguages = localStorage.getItem(STORAGE_KEYS.LANGUAGES);
     if (savedLanguages) {
@@ -342,7 +344,7 @@ function loadSavedData() {
     if (savedReference) {
         document.getElementById('reference-text').value = savedReference;
     }
-    
+
     // Load skills
     const savedSkills = localStorage.getItem(STORAGE_KEYS.SKILLS);
     if (savedSkills) {
@@ -386,10 +388,10 @@ function saveContactInfo() {
         linkedin: document.getElementById('contact-linkedin').value.trim()
     };
     localStorage.setItem(STORAGE_KEYS.CONTACT, JSON.stringify(contact));
-    
+
     const name = document.getElementById('resume-name').value.trim();
     if (name) localStorage.setItem(STORAGE_KEYS.NAME, name);
-    
+
     const title = document.getElementById('resume-title').value.trim();
     if (title) localStorage.setItem(STORAGE_KEYS.TITLE, title);
 }
@@ -427,7 +429,7 @@ function saveExperience() {
                 exp[input.name] = value;
             }
         });
-        
+
         const respInputs = card.querySelectorAll('.responsibility-item input');
         respInputs.forEach(input => {
             const value = input.value.trim();
@@ -435,7 +437,7 @@ function saveExperience() {
                 exp.responsibilities.push(value);
             }
         });
-        
+
         if (Object.keys(exp).length > 1 || exp.responsibilities.length > 0) {
             experience.push(exp);
         }
@@ -492,7 +494,7 @@ function toggleSection(e) {
     const checkbox = e.target;
     const sectionId = checkbox.id.replace('-enabled', '');
     const contentDiv = document.getElementById(`${sectionId}-content`);
-    
+
     if (checkbox.checked) {
         contentDiv.classList.remove('hidden');
     } else {
@@ -505,78 +507,56 @@ async function regenerateSection(sectionType) {
     const userName = document.getElementById('resume-name').value.trim();
     const btn = document.getElementById(`regenerate-${sectionType}-btn`);
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/6953cdac-8acd-439e-a8c6-252d8b296cad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2',location:'public/script.js:regenerateSection:entry',message:'Regenerate clicked',data:{sectionType,jobDescriptionLen:String(jobDescription||'').length,hasUserName:!!userName,hasOpenAIKey:!!localStorage.getItem(STORAGE_KEYS.OPENAI_API_KEY),hasGeminiKey:!!localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion agent log
-    
     if (!jobDescription) {
         alert('Please enter a job description first.');
         return;
     }
-    
-    const openaiKey = localStorage.getItem(STORAGE_KEYS.OPENAI_API_KEY);
+
     const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
-    
-    // Relaxed check: Allow request to proceed even if no local keys (Server might have env vars)
-    // if (!openaiKey && !geminiKey) {
-    //     alert('Please add your OpenAI or Gemini API Key in the Developer setup first.');
-    //     return;
-    // }
+    if (!geminiKey) {
+        alert('Please add your Google Gemini API Key in the Developer setup first.');
+        return;
+    }
 
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '🔄 Regenerating...';
-    
-    try {
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-        if (openaiKey) headers['X-OpenAI-Key'] = openaiKey;
-        if (geminiKey) headers['X-Gemini-Key'] = geminiKey;
 
-        // Collect current resume data to provide context to the AI
+    try {
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
         const resumeData = collectResumeData();
-        
-        // IMPORTANT: Only send plain skill names to AI (avoid "Skill - Description" repetition)
         const skillNames = Array.from(document.querySelectorAll('#skills-list input[name="skill-name"]'))
             .map(input => input.value.trim())
             .filter(Boolean);
 
-        const response = await fetch('/api/regenerate-section', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({ 
-                jobDescription, 
-                userName, 
-                sectionType,
-                userContext: {
-                    skills: skillNames,
-                    experience: resumeData.experience.items,
-                    education: resumeData.education.items,
-                    title: resumeData.title
-                }
-            })
-        });
-        
-        const data = await response.json();
+        const prompt = `
+          Regenerate the "${sectionType}" section for an ATS-optimized resume.
+          User Info - Title: ${resumeData.title}, Name: ${userName}
+          Job Description: ${jobDescription}
+          Current Section Data: ${JSON.stringify(resumeData[sectionType] || {})}
+          Other Context - Skills: ${skillNames.join(', ')}
+          
+          Return ONLY the new content for this section. If it's a list (like skills or experience), return it as a JSON array of objects/strings as appropriate for the data structure. Otherwise, return plain text.
+        `;
 
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6953cdac-8acd-439e-a8c6-252d8b296cad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H3',location:'public/script.js:regenerateSection:response',message:'Regenerate response received',data:{sectionType,ok:response.ok,status:response.status,hasContent:typeof data?.content!=='undefined',contentType:typeof data?.content,contentLen:typeof data?.content==='string'?data.content.length:Array.isArray(data?.content)?data.content.length:null,contentHasProfessionalCandidate:/Professional Candidate/i.test(String(data?.content||''))},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion agent log
-        
-        if (response.ok) {
-            applyRegeneratedData(sectionType, data.content);
-            showMessage(`${sectionType.charAt(0).toUpperCase() + sectionType.slice(1).replace('-', ' ')} regenerated!`, 'success');
-        } else {
-            throw new Error(data.error || 'Failed to regenerate');
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        let content;
+        try {
+            const jsonMatch = text.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
+            content = jsonMatch ? JSON.parse(jsonMatch[0]) : text.trim();
+        } catch (e) {
+            content = text.trim();
         }
+
+        applyRegeneratedData(sectionType, content);
+        showMessage(`${sectionType.charAt(0).toUpperCase() + sectionType.slice(1).replace('-', ' ')} regenerated!`, 'success');
     } catch (error) {
         console.error('Error:', error);
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/6953cdac-8acd-439e-a8c6-252d8b296cad',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H3',location:'public/script.js:regenerateSection:catch',message:'Regenerate errored',data:{sectionType,errorMessage:String(error?.message||'')},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion agent log
-
         alert('Failed to regenerate: ' + error.message);
     } finally {
         btn.disabled = false;
@@ -585,7 +565,7 @@ async function regenerateSection(sectionType) {
 }
 
 function applyRegeneratedData(sectionType, content) {
-    switch(sectionType) {
+    switch (sectionType) {
         case 'summary':
             document.getElementById('profile-text').value = content;
             break;
@@ -628,43 +608,37 @@ async function humanizeCoverLetter() {
     const coverLetterTextarea = document.getElementById('cover-letter-text');
     const humanizeBtn = document.getElementById('humanize-btn');
     const content = coverLetterTextarea.value.trim();
-    
+
     if (!content) {
         alert('Please generate or write a cover letter first.');
         return;
     }
-    
-    const openaiKey = localStorage.getItem(STORAGE_KEYS.OPENAI_API_KEY);
+
     const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
-    
-    // Relaxed check: Allow request to proceed (Server might have env vars)
-    // if (!openaiKey && !geminiKey) {
-    //     alert('Please add your OpenAI or Gemini API Key in the Developer setup first.');
-    //     return;
-    // }
-    
+    if (!geminiKey) {
+        alert('Please add your Google Gemini API Key in the Developer setup first.');
+        return;
+    }
+
     humanizeBtn.disabled = true;
-    humanizeBtn.innerHTML = 'Humanizing... <span class="loading"></span>';
-    
+    humanizeBtn.innerHTML = 'Humanizing with Gemini... <span class="loading"></span>';
+
     try {
-        const response = await fetch('/api/humanize', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-OpenAI-Key': openaiKey || '',
-                'X-Gemini-Key': geminiKey || ''
-            },
-            body: JSON.stringify({ content })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            coverLetterTextarea.value = data.humanizedContent;
-            showMessage('Cover letter humanized successfully!', 'success');
-        } else {
-            throw new Error(data.error || 'Humanization failed');
-        }
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        const prompt = `
+          Humanize the following cover letter to make it sound more natural and less like it was generated by AI.
+          Keep the professional tone and key information intact.
+          Cover Letter: ${content}
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        coverLetterTextarea.value = text.trim();
+        showMessage('Cover letter humanized successfully!', 'success');
     } catch (error) {
         console.error('Error:', error);
         alert('Humanization failed: ' + error.message);
@@ -678,54 +652,55 @@ async function analyzeJobDescription() {
     const jobDescription = document.getElementById('job-description').value.trim();
     const userName = document.getElementById('resume-name').value.trim();
     const analyzeBtn = document.getElementById('analyze-btn');
-    const resultsDiv = document.getElementById('analysis-results');
-    
+
     if (!jobDescription) {
         alert('Please enter a job description');
         return;
     }
-    
-    const openaiKey = localStorage.getItem(STORAGE_KEYS.OPENAI_API_KEY);
+
     const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
-    const undetectableKey = localStorage.getItem(STORAGE_KEYS.UNDETECTABLE_API_KEY);
-    
-    // Relaxed check: Allow request to proceed even if no local keys. 
-    // The server will use process.env keys if headers are missing.
-    /* 
-    if (!openaiKey && !geminiKey) {
-        alert('Please add your OpenAI or Gemini API Key in the Developer setup on the landing page first.');
-        window.location.href = '/landing';
+
+    if (!geminiKey) {
+        alert('Please add your Google Gemini API Key in the Developer setup on the landing page first.');
+        window.location.href = 'landing.html';
         return;
     }
-    */
 
     analyzeBtn.disabled = true;
-    analyzeBtn.innerHTML = 'Analyzing with AI... <span class="loading"></span>';
-    
-    try {
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-        
-        if (openaiKey) headers['X-OpenAI-Key'] = openaiKey;
-        if (geminiKey) headers['X-Gemini-Key'] = geminiKey;
-        if (undetectableKey) headers['X-Undetectable-Key'] = undetectableKey;
+    analyzeBtn.innerHTML = 'Analyzing with Gemini... <span class="loading"></span>';
 
-        const response = await fetch('/api/analyze-job', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({ jobDescription, userName })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            analysisResults = data;
-            displayAnalysisResults(data);
-            applyRecommendations(data);
-        } else {
-            throw new Error(data.error || 'Analysis failed');
-        }
+    try {
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        const prompt = `
+          Analyze the following job description and extract key information for an ATS-optimized resume.
+          Return ONLY a valid JSON object with the following structure:
+          {
+            "extractedSkills": ["skill1", "skill2", ...],
+            "extractedKeywords": [{"skill": "skill1", "category": "technical/soft/management/etc"}],
+            "educationRequirements": ["degree1", ...],
+            "experienceRequirement": "e.g. 5+ years",
+            "suggestedTitle": "Professional Job Title",
+            "professionalSummary": "A concise, 3-4 sentence ATS-optimized professional summary tailored to this role.",
+            "recommendations": [{"type": "skills/technical/leadership", "message": "specific advice to pass ATS filters"}],
+            "suggestedCoverLetter": "A full professional cover letter tailored to this role."
+          }
+          Job Description: ${jobDescription}
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+        if (!jsonMatch) throw new Error("Could not parse AI response");
+        const data = JSON.parse(jsonMatch[0]);
+
+        analysisResults = data;
+        displayAnalysisResults(data);
+        applyRecommendations(data);
+        showMessage('Analysis complete!', 'success');
     } catch (error) {
         console.error('Error:', error);
         alert('Failed to analyze job description: ' + error.message);
@@ -737,14 +712,14 @@ async function analyzeJobDescription() {
 
 function displayAnalysisResults(data) {
     const resultsDiv = document.getElementById('analysis-results');
-    
+
     let html = `
         <h3>📊 Analysis Results</h3>
         <div style="margin-top: 15px;">
             <h4>Extracted Skills:</h4>
             <div class="skills-tags">
     `;
-    
+
     if (data.extractedSkills && data.extractedSkills.length > 0) {
         data.extractedSkills.forEach(skill => {
             html += `<span class="skill-tag">${skill}</span>`;
@@ -752,12 +727,12 @@ function displayAnalysisResults(data) {
     } else {
         html += '<span style="color: #666;">No specific skills detected</span>';
     }
-    
+
     html += `
             </div>
         </div>
     `;
-    
+
     if (data.professionalSummary) {
         const profileTextarea = document.getElementById('profile-text');
         if (profileTextarea) {
@@ -770,7 +745,7 @@ function displayAnalysisResults(data) {
             </div>
         `;
     }
-    
+
     if (data.recommendations && data.recommendations.length > 0) {
         html += '<div style="margin-top: 20px;"><h4>Recommendations:</h4>';
         data.recommendations.forEach(rec => {
@@ -778,7 +753,7 @@ function displayAnalysisResults(data) {
         });
         html += '</div>';
     }
-    
+
     if (data.suggestedTitle) {
         document.getElementById('resume-title').value = data.suggestedTitle;
         saveContactInfo();
@@ -793,16 +768,16 @@ function displayAnalysisResults(data) {
             document.getElementById('cover-letter-content').classList.remove('hidden');
         }
     }
-    
+
     if (data.note) {
         html += `<div style="margin-top: 10px; color: #856404; background-color: #fff3cd; padding: 10px; border-radius: 4px; font-size: 13px;">
             ⚠️ ${data.note}. Please check your OpenAI billing or plan.
         </div>`;
     }
-    
+
     resultsDiv.innerHTML = html;
     resultsDiv.classList.remove('hidden');
-    
+
     // Calculate ATS Score
     calculateATSCompatibility(data);
 }
@@ -812,32 +787,32 @@ function calculateATSCompatibility(data) {
     const scoreBar = document.getElementById('ats-score-bar');
     const scoreText = document.getElementById('ats-score-text');
     const missingKeywordsList = document.getElementById('missing-keywords-list');
-    
+
     // Get user's current skills
     const userSkills = Array.from(document.querySelectorAll('#skills-list input[name="skill-name"]'))
         .map(input => input.value.trim().toLowerCase())
         .filter(s => s !== '');
-    
+
     const targetSkills = data.extractedSkills || [];
     if (targetSkills.length === 0) {
         atsDiv.classList.add('hidden');
         return;
     }
-    
-    const matchedSkills = targetSkills.filter(skill => 
+
+    const matchedSkills = targetSkills.filter(skill =>
         userSkills.some(userSkill => userSkill.includes(skill.toLowerCase()) || skill.toLowerCase().includes(userSkill))
     );
-    
-    const missingSkills = targetSkills.filter(skill => 
+
+    const missingSkills = targetSkills.filter(skill =>
         !userSkills.some(userSkill => userSkill.includes(skill.toLowerCase()) || skill.toLowerCase().includes(userSkill))
     );
-    
+
     const score = Math.round((matchedSkills.length / targetSkills.length) * 100);
-    
+
     // Update UI
     scoreBar.style.setProperty('--score-width', `${score}%`);
     scoreText.textContent = `${score}%`;
-    
+
     missingKeywordsList.innerHTML = '';
     missingSkills.forEach(skill => {
         const pill = document.createElement('span');
@@ -850,7 +825,7 @@ function calculateATSCompatibility(data) {
         };
         missingKeywordsList.appendChild(pill);
     });
-    
+
     atsDiv.classList.remove('hidden');
 }
 
@@ -903,14 +878,14 @@ function generateSkillDescription(skill, analysisData) {
         'leadership': 'Proven ability to lead and motivate teams to achieve goals',
         'financial analysis': 'Expert in financial modeling and strategic analysis'
     };
-    
+
     // Check if we have a predefined description
     for (const [key, desc] of Object.entries(descriptions)) {
         if (skillLower.includes(key)) {
             return desc;
         }
     }
-    
+
     // Generate based on category
     const category = analysisData.extractedKeywords.find(k => k.skill.toLowerCase() === skillLower)?.category;
     if (category === 'technical') {
@@ -920,14 +895,14 @@ function generateSkillDescription(skill, analysisData) {
     } else if (category === 'soft') {
         return `Strong ${skill} skills with demonstrated ability in professional settings`;
     }
-    
+
     return `Experienced in ${skill} with proven results`;
 }
 
 function addSkillItem(name = '', description = '') {
     const skillsList = document.getElementById('skills-list');
     const id = `skill-${skillCounter++}`;
-    
+
     const itemDiv = document.createElement('div');
     itemDiv.className = 'item-card';
     itemDiv.id = id;
@@ -939,14 +914,14 @@ function addSkillItem(name = '', description = '') {
         <input type="text" name="skill-name" class="item-input" placeholder="Skill name (e.g., JavaScript, Project Management)" value="${name}" onblur="saveSkills();">
         <input type="text" name="skill-desc" class="item-input" placeholder="One-line description (optional)" value="${description}" style="margin-top: 8px;" onblur="saveSkills();">
     `;
-    
+
     skillsList.appendChild(itemDiv);
 }
 
 function addEducationItem(eduData = null) {
     const educationList = document.getElementById('education-list');
     const id = `education-${educationCounter++}`;
-    
+
     const itemDiv = document.createElement('div');
     itemDiv.className = 'item-card';
     itemDiv.id = id;
@@ -960,14 +935,14 @@ function addEducationItem(eduData = null) {
         <input type="text" name="field" class="item-input" placeholder="Field of Study" value="${eduData?.field || ''}" onblur="saveEducation();">
         <input type="text" name="period" class="item-input" placeholder="Period (e.g., 2015-2019)" value="${eduData?.period || ''}" onblur="saveEducation();">
     `;
-    
+
     educationList.appendChild(itemDiv);
 }
 
 function addExperienceItem(expData = null) {
     const experienceList = document.getElementById('experience-list');
     const id = `experience-${experienceCounter++}`;
-    
+
     const itemDiv = document.createElement('div');
     itemDiv.className = 'item-card';
     itemDiv.id = id;
@@ -985,9 +960,9 @@ function addExperienceItem(expData = null) {
         </div>
         <button type="button" class="btn btn-secondary" onclick="addResponsibility('${id}')" style="margin-top: 5px;">+ Add Responsibility</button>
     `;
-    
+
     experienceList.appendChild(itemDiv);
-    
+
     // Add responsibilities if data exists
     if (expData && expData.responsibilities && expData.responsibilities.length > 0) {
         expData.responsibilities.forEach(resp => {
@@ -1001,7 +976,7 @@ function addExperienceItem(expData = null) {
 function addResponsibility(experienceId, value = '') {
     const responsibilitiesDiv = document.getElementById(`responsibilities-${experienceId}`);
     const respId = `resp-${Date.now()}-${Math.random()}`;
-    
+
     const respDiv = document.createElement('div');
     respDiv.className = 'responsibility-item';
     respDiv.id = respId;
@@ -1009,14 +984,14 @@ function addResponsibility(experienceId, value = '') {
         <input type="text" class="item-input" placeholder="Responsibility or achievement" value="${value}" onblur="saveExperience();">
         <button type="button" class="btn btn-danger" onclick="removeItem('${respId}'); saveExperience();">×</button>
     `;
-    
+
     responsibilitiesDiv.appendChild(respDiv);
 }
 
 function addLanguageItem(value = '') {
     const languagesList = document.getElementById('languages-list');
     const id = `language-${languageCounter++}`;
-    
+
     const itemDiv = document.createElement('div');
     itemDiv.className = 'item-card';
     itemDiv.id = id;
@@ -1027,14 +1002,14 @@ function addLanguageItem(value = '') {
         </div>
         <input type="text" name="language" class="item-input" placeholder="e.g. English (Fluent), Spanish (Basic)" value="${value}" onblur="saveLanguages();">
     `;
-    
+
     languagesList.appendChild(itemDiv);
 }
 
 function addAchievementItem(value = '') {
     const achievementsList = document.getElementById('achievements-list');
     const id = `achievement-${achievementCounter++}`;
-    
+
     const itemDiv = document.createElement('div');
     itemDiv.className = 'item-card';
     itemDiv.id = id;
@@ -1045,7 +1020,7 @@ function addAchievementItem(value = '') {
         </div>
         <input type="text" name="achievement" class="item-input" placeholder="Award, certification, or key project..." value="${value}" onblur="saveAchievements();">
     `;
-    
+
     achievementsList.appendChild(itemDiv);
 }
 
@@ -1057,66 +1032,123 @@ function removeItem(id) {
 }
 
 async function generatePDF(coverLetterOnly = false) {
-    const generateBtn = coverLetterOnly ? 
-        document.getElementById('generate-cover-letter-btn') : 
+    const generateBtn = coverLetterOnly ?
+        document.getElementById('generate-cover-letter-btn') :
         document.getElementById('generate-pdf-btn');
     const originalText = generateBtn.innerHTML;
-    
-    // Validate required fields
+
     const name = document.getElementById('resume-name').value.trim();
     const title = document.getElementById('resume-title').value.trim();
-    
+
     if (!name || !title) {
         alert('Please fill in at least your name and professional title');
         return;
     }
-    
-    if (coverLetterOnly) {
-        const coverLetterContent = document.getElementById('cover-letter-text').value.trim();
-        if (!coverLetterContent) {
-            alert('Please enter or generate cover letter content first');
-            return;
-        }
-    }
-    
-    // Save all data before generating
+
     saveContactInfo();
     saveEducation();
     saveExperience();
     saveSkills();
     saveAchievements();
     saveLanguages();
-    
+
     generateBtn.disabled = true;
     generateBtn.innerHTML = (coverLetterOnly ? 'Generating Cover Letter...' : 'Generating PDF...') + ' <span class="loading"></span>';
-    
+
     try {
-        // Collect resume data
         const resumeData = collectResumeData();
-        if (coverLetterOnly) {
-            resumeData.generateOnlyCoverLetter = true;
-            resumeData.coverLetter.enabled = true; // Force enabled if requested specifically
-        }
-        
-        const response = await fetch('/api/generate-pdf', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(resumeData)
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            // Download the PDF
-            window.location.href = data.downloadUrl;
-            
-            // Show success message
-            showMessage('PDF generated successfully! Download should start automatically.', 'success');
+        const element = document.createElement('div');
+        element.style.padding = '40px';
+        element.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+        element.style.color = '#333';
+        element.style.lineHeight = '1.5';
+
+        let html = `
+            <div style="text-align: center; border-bottom: 2px solid #0066cc; margin-bottom: 20px; padding-bottom: 10px;">
+                <h1 style="margin: 0; color: #0066cc; font-size: 28px;">${resumeData.name}</h1>
+                <p style="margin: 5px 0; font-size: 18px; color: #555;">${resumeData.title}</p>
+                <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                    ${resumeData.contact.email} | ${resumeData.contact.phone} | ${resumeData.contact.location}
+                    ${resumeData.contact.linkedin ? ` | ${resumeData.contact.linkedin}` : ''}
+                </div>
+            </div>
+        `;
+
+        if (!coverLetterOnly) {
+            if (resumeData.profile.enabled) {
+                html += `
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px; color: #0066cc;">Professional Summary</h3>
+                        <p style="font-size: 13px;">${resumeData.profile.content}</p>
+                    </div>
+                `;
+            }
+
+            if (resumeData.experience.enabled && resumeData.experience.items.length > 0) {
+                html += `<div style="margin-bottom: 20px;"><h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px; color: #0066cc;">Work Experience</h3>`;
+                resumeData.experience.items.forEach(exp => {
+                    html += `
+                        <div style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                                <span>${exp.position}</span>
+                                <span>${exp.period}</span>
+                            </div>
+                            <div style="font-style: italic; color: #555;">${exp.company}, ${exp.location}</div>
+                            <ul style="margin-top: 5px; padding-left: 20px; font-size: 13px;">
+                                ${exp.responsibilities.map(r => `<li>${r}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            if (resumeData.skills.enabled && resumeData.skills.items.length > 0) {
+                html += `
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px; color: #0066cc;">Skills</h3>
+                        <p style="font-size: 13px;">${resumeData.skills.items.join(' • ')}</p>
+                    </div>
+                `;
+            }
+
+            if (resumeData.education.enabled && resumeData.education.items.length > 0) {
+                html += `<div style="margin-bottom: 20px;"><h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px; color: #0066cc;">Education</h3>`;
+                resumeData.education.items.forEach(edu => {
+                    html += `
+                        <div style="margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                                <span>${edu.degree} in ${edu.field}</span>
+                                <span>${edu.period}</span>
+                            </div>
+                            <div style="color: #555;">${edu.school}</div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
         } else {
-            throw new Error(data.error || 'PDF generation failed');
+            // Cover Letter Only
+            html += `
+                <div style="margin-top: 30px;">
+                    <h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px; color: #0066cc;">Cover Letter</h3>
+                    <p style="font-size: 13px; white-space: pre-wrap;">${resumeData.coverLetter.content}</p>
+                </div>
+            `;
         }
+
+        element.innerHTML = html;
+
+        const opt = {
+            margin: 1,
+            filename: `${resumeData.name.replace(/\s+/g, '_')}_${coverLetterOnly ? 'CoverLetter' : 'Resume'}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        await html2pdf().set(opt).from(element).save();
+        showMessage('PDF generated successfully!', 'success');
     } catch (error) {
         console.error('Error:', error);
         showMessage('Failed to generate PDF: ' + error.message, 'error');
@@ -1170,7 +1202,7 @@ function collectResumeData() {
             content: document.getElementById('cover-letter-text').value.trim()
         }
     };
-    
+
     // Collect achievements
     if (data.achievements.enabled) {
         const achievementCards = document.querySelectorAll('#achievements-list .item-card');
@@ -1192,7 +1224,7 @@ function collectResumeData() {
             }
         });
     }
-    
+
     // Collect skills with descriptions
     if (data.skills.enabled) {
         const skillCards = document.querySelectorAll('#skills-list .item-card');
@@ -1207,7 +1239,7 @@ function collectResumeData() {
             }
         });
     }
-    
+
     // Collect education
     if (data.education.enabled) {
         const educationCards = document.querySelectorAll('#education-list .item-card');
@@ -1225,7 +1257,7 @@ function collectResumeData() {
             }
         });
     }
-    
+
     // Collect experience
     if (data.experience.enabled) {
         const experienceCards = document.querySelectorAll('#experience-list .item-card');
@@ -1240,7 +1272,7 @@ function collectResumeData() {
                     exp[input.name] = value;
                 }
             });
-            
+
             // Collect responsibilities
             const respInputs = card.querySelectorAll('.responsibility-item input');
             respInputs.forEach(input => {
@@ -1249,13 +1281,13 @@ function collectResumeData() {
                     exp.responsibilities.push(value);
                 }
             });
-            
+
             if (Object.keys(exp).length > 1 || exp.responsibilities.length > 0) {
                 data.experience.items.push(exp);
             }
         });
     }
-    
+
     return data;
 }
 
@@ -1265,14 +1297,14 @@ function showMessage(message, type) {
     if (existing) {
         existing.remove();
     }
-    
+
     const messageDiv = document.createElement('div');
     messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
     messageDiv.textContent = message;
-    
+
     const actionButtons = document.querySelector('.action-buttons');
     actionButtons.insertBefore(messageDiv, actionButtons.firstChild);
-    
+
     // Auto-remove after 5 seconds
     setTimeout(() => {
         messageDiv.remove();
@@ -1285,4 +1317,15 @@ window.addResponsibility = addResponsibility;
 window.saveEducation = saveEducation;
 window.saveExperience = saveExperience;
 window.saveSkills = saveSkills;
+window.saveAchievements = saveAchievements;
+window.saveLanguages = saveLanguages;
 window.handleSignOut = handleSignOut;
+window.addSkillItem = addSkillItem;
+window.addEducationItem = addEducationItem;
+window.addExperienceItem = addExperienceItem;
+window.addAchievementItem = addAchievementItem;
+window.addLanguageItem = addLanguageItem;
+window.generatePDF = generatePDF;
+window.analyzeJobDescription = analyzeJobDescription;
+window.regenerateSection = regenerateSection;
+window.humanizeCoverLetter = humanizeCoverLetter;
