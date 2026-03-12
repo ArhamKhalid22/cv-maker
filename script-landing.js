@@ -3,6 +3,7 @@ const STORAGE_KEYS = {
     GOOGLE_CLIENT_ID: 'google_client_id',
     OPENAI_API_KEY: 'openai_api_key',
     GEMINI_API_KEY: 'gemini_api_key',
+    OPENROUTER_API_KEY: 'openrouter_api_key',
     UNDETECTABLE_API_KEY: 'undetectable_api_key'
 };
 
@@ -46,6 +47,7 @@ function loadConfig() {
     document.getElementById('google-client-id').value = localStorage.getItem(STORAGE_KEYS.GOOGLE_CLIENT_ID) || '';
     document.getElementById('openai-api-key').value = localStorage.getItem(STORAGE_KEYS.OPENAI_API_KEY) || '';
     document.getElementById('gemini-api-key').value = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY) || '';
+    document.getElementById('openrouter-api-key').value = localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY) || '';
     document.getElementById('undetectable-api-key').value = localStorage.getItem(STORAGE_KEYS.UNDETECTABLE_API_KEY) || '';
     
     updateStatus();
@@ -55,11 +57,13 @@ function saveConfig() {
     const googleId = document.getElementById('google-client-id').value.trim();
     const openaiKey = document.getElementById('openai-api-key').value.trim();
     const geminiKey = document.getElementById('gemini-api-key').value.trim();
+    const openrouterKey = document.getElementById('openrouter-api-key').value.trim();
     const undetectableKey = document.getElementById('undetectable-api-key').value.trim();
 
     if (googleId) localStorage.setItem(STORAGE_KEYS.GOOGLE_CLIENT_ID, googleId);
     if (openaiKey) localStorage.setItem(STORAGE_KEYS.OPENAI_API_KEY, openaiKey);
     if (geminiKey) localStorage.setItem(STORAGE_KEYS.GEMINI_API_KEY, geminiKey);
+    if (openrouterKey) localStorage.setItem(STORAGE_KEYS.OPENROUTER_API_KEY, openrouterKey);
     if (undetectableKey) localStorage.setItem(STORAGE_KEYS.UNDETECTABLE_API_KEY, undetectableKey);
 
     updateStatus();
@@ -70,12 +74,13 @@ function updateStatus() {
     const statusDiv = document.getElementById('config-status');
     const hasOpenAI = !!localStorage.getItem(STORAGE_KEYS.OPENAI_API_KEY);
     const hasGemini = !!localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
+    const hasOpenRouter = !!localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY);
     
-    if (hasOpenAI && hasGemini) {
-        statusDiv.textContent = '✅ AI Fully Configured (OpenAI + Gemini Fallback)';
+    if (hasOpenAI && hasGemini && hasOpenRouter) {
+        statusDiv.textContent = '✅ AI Fully Configured (OpenAI + Gemini + OpenRouter)';
         statusDiv.className = 'status-badge status-configured';
-    } else if (hasOpenAI || hasGemini) {
-        statusDiv.textContent = `⚠️ AI Partially Configured (${hasOpenAI ? 'OpenAI' : 'Gemini'} only)`;
+    } else if (hasOpenAI || hasGemini || hasOpenRouter) {
+        statusDiv.textContent = `⚠️ AI Configured (${[hasOpenAI ? 'OpenAI' : '', hasGemini ? 'Gemini' : '', hasOpenRouter ? 'OpenRouter' : ''].filter(Boolean).join(' + ')})`;
         statusDiv.className = 'status-badge status-configured';
     } else {
         statusDiv.textContent = '❌ AI Not Configured (Regeneration will fail)';

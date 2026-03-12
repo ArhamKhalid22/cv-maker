@@ -63,6 +63,7 @@ const STORAGE_KEYS = {
     TITLE: 'resume_title',
     OPENAI_API_KEY: 'openai_api_key',
     GEMINI_API_KEY: 'gemini_api_key',
+    OPENROUTER_API_KEY: 'openrouter_api_key',
     UNDETECTABLE_API_KEY: 'undetectable_api_key'
 };
 
@@ -168,8 +169,8 @@ function initializeEventListeners() {
 
     // Generate PDF
     // IMPORTANT: don't pass the click event object into generatePDF()
-    document.getElementById('generate-pdf-btn').addEventListener('click', () => generatePDF(false));
-    document.getElementById('generate-cover-letter-btn').addEventListener('click', () => generatePDF(true));
+    document.getElementById('generate-pdf-btn').addEventListener('click', () => generateResumePDF());
+    document.getElementById('generate-cover-letter-btn').addEventListener('click', () => generateCoverLetterPDF());
 }
 
 let saveTimeout;
@@ -513,19 +514,13 @@ async function regenerateSection(sectionType) {
     }
 
     const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
-    if (!geminiKey) {
-        alert('Please add your Google Gemini API Key in the Developer setup first.');
-        return;
-    }
+    const openRouterKey = "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";
 
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '🔄 Regenerating...';
 
     try {
-        const genAI = new GoogleGenerativeAI(geminiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
         const resumeData = collectResumeData();
         const skillNames = Array.from(document.querySelectorAll('#skills-list input[name="skill-name"]'))
             .map(input => input.value.trim())
@@ -538,12 +533,27 @@ async function regenerateSection(sectionType) {
           Current Section Data: ${JSON.stringify(resumeData[sectionType] || {})}
           Other Context - Skills: ${skillNames.join(', ')}
           
-          Return ONLY the new content for this section. If it's a list (like skills or experience), return it as a JSON array of objects/strings as appropriate for the data structure. Otherwise, return plain text.
+          Return ONLY the new content for this section as valid JSON.
+          - For "skills": return a JSON array of objects like [{"name": "Skill Name", "description": "Brief description"}]
+          - For "experience": return a JSON array of experience objects
+          - For "achievements": return a JSON array of achievement strings
+          - For "summary" or "cover-letter": return plain text
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        let text;
+        if (openRouterKey) {
+            // Try OpenRouter first (Llama 3 or DeepSeek)
+            text = await callOpenRouter(openRouterKey, prompt);
+        } else if (geminiKey) {
+            // Fallback to Gemini
+            const genAI = new GoogleGenerativeAI(geminiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            text = response.text();
+        } else {
+            throw new Error("No API key found. Please configure OpenRouter or Gemini on the landing page.");
+        }
 
         let content;
         try {
@@ -574,7 +584,17 @@ function applyRegeneratedData(sectionType, content) {
             if (Array.isArray(content)) {
                 const seen = new Set();
                 content.forEach(skill => {
-                    const parsed = splitSkillNameAndDescription(skill?.name, skill?.description);
+                    // Handle both plain strings and objects
+                    let skillName = '';
+                    let skillDesc = '';
+                    if (typeof skill === 'string') {
+                        skillName = skill.trim();
+                    } else if (skill && typeof skill === 'object') {
+                        skillName = (skill.name || skill.skill || '').trim();
+                        skillDesc = (skill.description || skill.desc || '').trim();
+                    }
+                    if (!skillName) return;
+                    const parsed = splitSkillNameAndDescription(skillName, skillDesc);
                     if (!parsed.name) return;
                     const key = parsed.name.toLowerCase();
                     if (seen.has(key)) return;
@@ -615,27 +635,30 @@ async function humanizeCoverLetter() {
     }
 
     const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
-    if (!geminiKey) {
-        alert('Please add your Google Gemini API Key in the Developer setup first.');
-        return;
-    }
+    const openRouterKey = "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";
 
     humanizeBtn.disabled = true;
-    humanizeBtn.innerHTML = 'Humanizing with Gemini... <span class="loading"></span>';
+    humanizeBtn.innerHTML = 'Humanizing... <span class="loading"></span>';
 
     try {
-        const genAI = new GoogleGenerativeAI(geminiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
         const prompt = `
           Humanize the following cover letter to make it sound more natural and less like it was generated by AI.
           Keep the professional tone and key information intact.
           Cover Letter: ${content}
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        let text;
+        if (openRouterKey) {
+            text = await callOpenRouter(openRouterKey, prompt);
+        } else if (geminiKey) {
+            const genAI = new GoogleGenerativeAI(geminiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            text = response.text();
+        } else {
+            throw new Error("No API key found. Please configure OpenRouter or Gemini on the landing page.");
+        }
 
         coverLetterTextarea.value = text.trim();
         showMessage('Cover letter humanized successfully!', 'success');
@@ -659,20 +682,12 @@ async function analyzeJobDescription() {
     }
 
     const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
-
-    if (!geminiKey) {
-        alert('Please add your Google Gemini API Key in the Developer setup on the landing page first.');
-        window.location.href = 'landing.html';
-        return;
-    }
+    const openRouterKey = "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";
 
     analyzeBtn.disabled = true;
-    analyzeBtn.innerHTML = 'Analyzing with Gemini... <span class="loading"></span>';
+    analyzeBtn.innerHTML = 'Analyzing... <span class="loading"></span>';
 
     try {
-        const genAI = new GoogleGenerativeAI(geminiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
         const prompt = `
           Analyze the following job description and extract key information for an ATS-optimized resume.
           Return ONLY a valid JSON object with the following structure:
@@ -684,14 +699,23 @@ async function analyzeJobDescription() {
             "suggestedTitle": "Professional Job Title",
             "professionalSummary": "A concise, 3-4 sentence ATS-optimized professional summary tailored to this role.",
             "recommendations": [{"type": "skills/technical/leadership", "message": "specific advice to pass ATS filters"}],
-            "suggestedCoverLetter": "A full professional cover letter tailored to this role."
+            "suggestedCoverLetter": "A full professional cover letter tailored to this role. IMPORTANT: Use the candidate's actual name '${userName || 'the candidate'}' instead of placeholders like [Your Name]. End with Sincerely, followed by the candidate's real name."
           }
           Job Description: ${jobDescription}
         `;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        let text;
+        if (openRouterKey) {
+            text = await callOpenRouter(openRouterKey, prompt);
+        } else if (geminiKey) {
+            const genAI = new GoogleGenerativeAI(geminiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            text = response.text();
+        } else {
+            throw new Error("No API key found. Please configure OpenRouter or Gemini on the landing page.");
+        }
         const jsonMatch = text.match(/\{[\s\S]*\}/);
 
         if (!jsonMatch) throw new Error("Could not parse AI response");
@@ -762,7 +786,15 @@ function displayAnalysisResults(data) {
     if (data.suggestedCoverLetter) {
         const coverLetterTextarea = document.getElementById('cover-letter-text');
         if (coverLetterTextarea) {
-            coverLetterTextarea.value = data.suggestedCoverLetter;
+            // Replace any [Your Name] placeholders with the actual user name
+            const actualName = document.getElementById('resume-name').value.trim() || 'Candidate';
+            let coverText = data.suggestedCoverLetter
+                .replace(/\[Your Name\]/gi, actualName)
+                .replace(/\[Your Full Name\]/gi, actualName)
+                .replace(/\[Full Name\]/gi, actualName)
+                .replace(/\[Name\]/gi, actualName)
+                .replace(/\[Candidate Name\]/gi, actualName);
+            coverLetterTextarea.value = coverText;
             // Enable cover letter section if it was empty
             document.getElementById('cover-letter-enabled').checked = true;
             document.getElementById('cover-letter-content').classList.remove('hidden');
@@ -1031,10 +1063,183 @@ function removeItem(id) {
     }
 }
 
-async function generatePDF(coverLetterOnly = false) {
-    const generateBtn = coverLetterOnly ?
-        document.getElementById('generate-cover-letter-btn') :
-        document.getElementById('generate-pdf-btn');
+// ===== PDF GENERATION (jsPDF direct text) =====
+
+// Helper: wraps long text into lines that fit within maxWidth
+function _wrapText(doc, text, maxWidth) {
+    return doc.splitTextToSize(text, maxWidth);
+}
+
+// Helper: adds a new page if y position exceeds page height
+function _checkPageBreak(doc, y, margin, pageHeight) {
+    if (y > pageHeight - margin) {
+        doc.addPage();
+        return margin;
+    }
+    return y;
+}
+
+// Core PDF builder using jsPDF directly
+function _buildPDFWithJsPDF(resumeData, sections, filename) {
+    // Access jsPDF from the html2pdf bundle
+    const { jsPDF } = window.jspdf || {};
+    let doc;
+    if (jsPDF) {
+        doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    } else {
+        // Fallback: try to get jsPDF from html2pdf's internal bundle
+        try {
+            doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' });
+        } catch(e) {
+            // Last resort: create via html2pdf worker
+            const tmpDoc = window.html2pdf().set({}).from('<p></p>');
+            alert('jsPDF not found. Please ensure html2pdf.js is loaded.');
+            return;
+        }
+    }
+
+    const pageWidth = doc.internal.pageSize.getWidth();   // ~612
+    const pageHeight = doc.internal.pageSize.getHeight();  // ~792
+    const margin = 50;
+    const contentWidth = pageWidth - (margin * 2);
+    let y = margin;
+
+    // ---- HEADER (Times New Roman, black, left-aligned) ----
+    doc.setTextColor(0, 0, 0);
+
+    doc.setFont('times', 'bold');
+    doc.setFontSize(22);
+    doc.text(resumeData.name, margin, y);
+    y += 25;
+
+    doc.setFont('times', 'normal');
+    doc.setFontSize(14);
+    doc.text(resumeData.title, margin, y);
+    y += 20;
+
+    // Contact line
+    const contactParts = [];
+    if (resumeData.contact.email) contactParts.push(resumeData.contact.email);
+    if (resumeData.contact.phone) contactParts.push(resumeData.contact.phone);
+    if (resumeData.contact.location) contactParts.push(resumeData.contact.location);
+    if (resumeData.contact.linkedin) contactParts.push(resumeData.contact.linkedin);
+
+    if (contactParts.length > 0) {
+        doc.setFontSize(9);
+        doc.text(contactParts.join('  |  '), margin, y);
+        y += 15;
+    }
+
+    // Divider line
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(1);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 20;
+
+    // ---- SECTIONS ----
+    sections.forEach(section => {
+        y = _checkPageBreak(doc, y, margin, pageHeight);
+
+        // Section title
+        doc.setFontSize(13);
+        doc.setFont('times', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text(section.title.toUpperCase(), margin, y);
+        y += 3;
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 12;
+
+        // Section content
+        doc.setFont('times', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(11);
+
+        if (section.type === 'text') {
+            const lines = _wrapText(doc, section.content, contentWidth);
+            lines.forEach(line => {
+                y = _checkPageBreak(doc, y, margin, pageHeight);
+                doc.text(line, margin, y);
+                y += 14;
+            });
+            y += 5;
+        } else if (section.type === 'bullets') {
+            section.items.forEach(item => {
+                y = _checkPageBreak(doc, y, margin, pageHeight);
+                const lines = _wrapText(doc, '•  ' + item, contentWidth);
+                lines.forEach((line, i) => {
+                    y = _checkPageBreak(doc, y, margin, pageHeight);
+                    doc.text(line, margin + (i > 0 ? 15 : 0), y);
+                    y += 14;
+                });
+            });
+            y += 5;
+        } else if (section.type === 'experience') {
+            section.items.forEach(exp => {
+                y = _checkPageBreak(doc, y, margin, pageHeight);
+                // Job title + period
+                doc.setFont('times', 'bold');
+                doc.setFontSize(11);
+                doc.setTextColor(0, 0, 0);
+                doc.text(exp.position || '', margin, y);
+                doc.text(exp.period || '', pageWidth - margin, y, { align: 'right' });
+                y += 14;
+                // Company + location
+                doc.setFont('times', 'italic');
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.text(`${exp.company || ''}${exp.location ? ', ' + exp.location : ''}`, margin, y);
+                y += 14;
+                // Responsibilities
+                doc.setFont('times', 'normal');
+                doc.setFontSize(11);
+                doc.setTextColor(0, 0, 0);
+                (exp.responsibilities || []).forEach(resp => {
+                    y = _checkPageBreak(doc, y, margin, pageHeight);
+                    const lines = _wrapText(doc, '•  ' + resp, contentWidth - 15);
+                    lines.forEach((line, i) => {
+                        y = _checkPageBreak(doc, y, margin, pageHeight);
+                        doc.text(line, margin + 10 + (i > 0 ? 15 : 0), y);
+                        y += 13;
+                    });
+                });
+                y += 8;
+            });
+        } else if (section.type === 'education') {
+            section.items.forEach(edu => {
+                y = _checkPageBreak(doc, y, margin, pageHeight);
+                doc.setFont('times', 'bold');
+                doc.setFontSize(11);
+                doc.setTextColor(0, 0, 0);
+                const degreeText = `${edu.degree || ''}${edu.field ? ' in ' + edu.field : ''}`;
+                doc.text(degreeText, margin, y);
+                doc.text(edu.period || '', pageWidth - margin, y, { align: 'right' });
+                y += 14;
+                doc.setFont('times', 'normal');
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.text(edu.school || '', margin, y);
+                y += 16;
+            });
+            y += 5;
+        } else if (section.type === 'inline') {
+            const lines = _wrapText(doc, section.items.join('  •  '), contentWidth);
+            lines.forEach(line => {
+                y = _checkPageBreak(doc, y, margin, pageHeight);
+                doc.text(line, margin, y);
+                y += 14;
+            });
+            y += 5;
+        }
+    });
+
+    doc.save(filename);
+}
+
+// ---- GENERATE RESUME PDF ----
+async function generateResumePDF() {
+    const generateBtn = document.getElementById('generate-pdf-btn');
     const originalText = generateBtn.innerHTML;
 
     const name = document.getElementById('resume-name').value.trim();
@@ -1053,105 +1258,175 @@ async function generatePDF(coverLetterOnly = false) {
     saveLanguages();
 
     generateBtn.disabled = true;
-    generateBtn.innerHTML = (coverLetterOnly ? 'Generating Cover Letter...' : 'Generating PDF...') + ' <span class="loading"></span>';
+    generateBtn.innerHTML = 'Generating Resume... <span class="loading"></span>';
 
     try {
         const resumeData = collectResumeData();
-        const element = document.createElement('div');
-        element.style.padding = '40px';
-        element.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-        element.style.color = '#333';
-        element.style.lineHeight = '1.5';
+        const sections = [];
 
-        let html = `
-            <div style="text-align: center; border-bottom: 2px solid #0066cc; margin-bottom: 20px; padding-bottom: 10px;">
-                <h1 style="margin: 0; color: #0066cc; font-size: 28px;">${resumeData.name}</h1>
-                <p style="margin: 5px 0; font-size: 18px; color: #555;">${resumeData.title}</p>
-                <div style="margin-top: 10px; font-size: 12px; color: #666;">
-                    ${resumeData.contact.email} | ${resumeData.contact.phone} | ${resumeData.contact.location}
-                    ${resumeData.contact.linkedin ? ` | ${resumeData.contact.linkedin}` : ''}
-                </div>
-            </div>
-        `;
-
-        if (!coverLetterOnly) {
-            if (resumeData.profile.enabled) {
-                html += `
-                    <div style="margin-bottom: 20px;">
-                        <h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px; color: #0066cc;">Professional Summary</h3>
-                        <p style="font-size: 13px;">${resumeData.profile.content}</p>
-                    </div>
-                `;
-            }
-
-            if (resumeData.experience.enabled && resumeData.experience.items.length > 0) {
-                html += `<div style="margin-bottom: 20px;"><h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px; color: #0066cc;">Work Experience</h3>`;
-                resumeData.experience.items.forEach(exp => {
-                    html += `
-                        <div style="margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                                <span>${exp.position}</span>
-                                <span>${exp.period}</span>
-                            </div>
-                            <div style="font-style: italic; color: #555;">${exp.company}, ${exp.location}</div>
-                            <ul style="margin-top: 5px; padding-left: 20px; font-size: 13px;">
-                                ${exp.responsibilities.map(r => `<li>${r}</li>`).join('')}
-                            </ul>
-                        </div>
-                    `;
-                });
-                html += `</div>`;
-            }
-
-            if (resumeData.skills.enabled && resumeData.skills.items.length > 0) {
-                html += `
-                    <div style="margin-bottom: 20px;">
-                        <h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px; color: #0066cc;">Skills</h3>
-                        <p style="font-size: 13px;">${resumeData.skills.items.join(' • ')}</p>
-                    </div>
-                `;
-            }
-
-            if (resumeData.education.enabled && resumeData.education.items.length > 0) {
-                html += `<div style="margin-bottom: 20px;"><h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px; color: #0066cc;">Education</h3>`;
-                resumeData.education.items.forEach(edu => {
-                    html += `
-                        <div style="margin-bottom: 10px;">
-                            <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                                <span>${edu.degree} in ${edu.field}</span>
-                                <span>${edu.period}</span>
-                            </div>
-                            <div style="color: #555;">${edu.school}</div>
-                        </div>
-                    `;
-                });
-                html += `</div>`;
-            }
-        } else {
-            // Cover Letter Only
-            html += `
-                <div style="margin-top: 30px;">
-                    <h3 style="border-bottom: 1px solid #ddd; padding-bottom: 5px; color: #0066cc;">Cover Letter</h3>
-                    <p style="font-size: 13px; white-space: pre-wrap;">${resumeData.coverLetter.content}</p>
-                </div>
-            `;
+        if (resumeData.profile.enabled && resumeData.profile.content) {
+            sections.push({ title: 'Professional Summary', type: 'text', content: resumeData.profile.content });
+        }
+        if (resumeData.experience.enabled && resumeData.experience.items.length > 0) {
+            sections.push({ title: 'Work Experience', type: 'experience', items: resumeData.experience.items });
+        }
+        if (resumeData.skills.enabled && resumeData.skills.items.length > 0) {
+            sections.push({ title: 'Skills', type: 'inline', items: resumeData.skills.items.slice(0, 5) });
+        }
+        if (resumeData.education.enabled && resumeData.education.items.length > 0) {
+            sections.push({ title: 'Education', type: 'education', items: resumeData.education.items });
+        }
+        if (resumeData.achievements.enabled && resumeData.achievements.items.length > 0) {
+            sections.push({ title: 'Achievements', type: 'bullets', items: resumeData.achievements.items });
+        }
+        if (resumeData.languages.enabled && resumeData.languages.items.length > 0) {
+            sections.push({ title: 'Languages', type: 'inline', items: resumeData.languages.items });
+        }
+        if (resumeData.reference.enabled && resumeData.reference.content) {
+            sections.push({ title: 'Reference', type: 'text', content: resumeData.reference.content });
         }
 
-        element.innerHTML = html;
-
-        const opt = {
-            margin: 1,
-            filename: `${resumeData.name.replace(/\s+/g, '_')}_${coverLetterOnly ? 'CoverLetter' : 'Resume'}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
-
-        await html2pdf().set(opt).from(element).save();
-        showMessage('PDF generated successfully!', 'success');
+        const filename = `${name.replace(/\s+/g, '_')}_Resume.pdf`;
+        _buildPDFWithJsPDF(resumeData, sections, filename);
+        showMessage('Resume PDF generated successfully!', 'success');
     } catch (error) {
-        console.error('Error:', error);
-        showMessage('Failed to generate PDF: ' + error.message, 'error');
+        console.error('Error generating Resume PDF:', error);
+        alert('PDF Error: ' + error.message);
+        showMessage('Failed to generate Resume PDF: ' + error.message, 'error');
+    } finally {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = originalText;
+    }
+}
+
+// ---- GENERATE COVER LETTER PDF ----
+async function generateCoverLetterPDF() {
+    const generateBtn = document.getElementById('generate-cover-letter-btn');
+    const originalText = generateBtn.innerHTML;
+
+    const name = document.getElementById('resume-name').value.trim();
+    const title = document.getElementById('resume-title').value.trim();
+    const coverLetterText = document.getElementById('cover-letter-text').value.trim();
+
+    if (!name || !title) {
+        alert('Please fill in at least your name and professional title');
+        return;
+    }
+
+    if (!coverLetterText) {
+        alert('Please write or generate a cover letter first. Enable the Cover Letter section and add content.');
+        return;
+    }
+
+    saveContactInfo();
+
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = 'Generating Cover Letter... <span class="loading"></span>';
+
+    try {
+        const resumeData = collectResumeData();
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 50;
+        const contentWidth = pageWidth - (margin * 2);
+        let y = margin;
+
+        // All black, Times New Roman, left-aligned
+        doc.setTextColor(0, 0, 0);
+
+        // Name - left aligned
+        doc.setFont('times', 'bold');
+        doc.setFontSize(18);
+        doc.text(resumeData.name, margin, y);
+        y += 20;
+
+        // Title - left aligned
+        doc.setFont('times', 'normal');
+        doc.setFontSize(12);
+        doc.text(resumeData.title, margin, y);
+        y += 16;
+
+        // Contact info - left aligned
+        const contactParts = [];
+        if (resumeData.contact.email) contactParts.push(resumeData.contact.email);
+        if (resumeData.contact.phone) contactParts.push(resumeData.contact.phone);
+        if (resumeData.contact.location) contactParts.push(resumeData.contact.location);
+        if (resumeData.contact.linkedin) contactParts.push(resumeData.contact.linkedin);
+
+        if (contactParts.length > 0) {
+            doc.setFontSize(10);
+            doc.text(contactParts.join('  |  '), margin, y);
+            y += 15;
+        }
+
+        // Divider line
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.75);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 25;
+
+        // Cover Letter body - Times New Roman, black, left-aligned
+        doc.setFont('times', 'normal');
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+
+        // Replace placeholder names with the actual user's name
+        let processedText = coverLetterText
+            .replace(/\[Your Name\]/gi, resumeData.name)
+            .replace(/\[Your Full Name\]/gi, resumeData.name)
+            .replace(/\[Full Name\]/gi, resumeData.name)
+            .replace(/\[Name\]/gi, resumeData.name)
+            .replace(/\[Candidate Name\]/gi, resumeData.name);
+
+        // Check if the text already ends with a sign-off (Sincerely, Best regards, etc.)
+        const hasSignOff = /\b(sincerely|best regards|regards|warm regards|kind regards|yours truly|respectfully)\s*,?\s*$/im.test(processedText.trim());
+
+        // Split by paragraphs (double newlines) to preserve paragraph spacing
+        const paragraphs = processedText.split(/\n\s*\n/);
+        paragraphs.forEach((paragraph, pIndex) => {
+            const trimmed = paragraph.trim();
+            if (!trimmed) return;
+
+            const lines = doc.splitTextToSize(trimmed, contentWidth);
+            lines.forEach(line => {
+                if (y > pageHeight - margin) {
+                    doc.addPage();
+                    y = margin;
+                }
+                doc.text(line, margin, y);
+                y += 16;
+            });
+
+            // Add paragraph spacing
+            y += 8;
+        });
+
+        // Sign-off with candidate name (only if text doesn't already end with one)
+        if (!hasSignOff) {
+            y += 10;
+            if (y > pageHeight - margin - 50) {
+                doc.addPage();
+                y = margin;
+            }
+            doc.setFont('times', 'normal');
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.text('Sincerely,', margin, y);
+            y += 24;
+            doc.setFont('times', 'bold');
+            doc.text(resumeData.name, margin, y);
+        }
+
+        const filename = `${name.replace(/\s+/g, '_')}_CoverLetter.pdf`;
+        doc.save(filename);
+        showMessage('Cover Letter PDF generated successfully!', 'success');
+    } catch (error) {
+        console.error('Error generating Cover Letter PDF:', error);
+        alert('PDF Error: ' + error.message);
+        showMessage('Failed to generate Cover Letter PDF: ' + error.message, 'error');
     } finally {
         generateBtn.disabled = false;
         generateBtn.innerHTML = originalText;
@@ -1325,7 +1600,37 @@ window.addEducationItem = addEducationItem;
 window.addExperienceItem = addExperienceItem;
 window.addAchievementItem = addAchievementItem;
 window.addLanguageItem = addLanguageItem;
-window.generatePDF = generatePDF;
+window.generateResumePDF = generateResumePDF;
+window.generateCoverLetterPDF = generateCoverLetterPDF;
 window.analyzeJobDescription = analyzeJobDescription;
 window.regenerateSection = regenerateSection;
+
+// ---- OPENROUTER HELPER ----
+async function callOpenRouter(apiKey, prompt) {
+    try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${apiKey}`,
+                "HTTP-Referer": window.location.origin, // Required for OpenRouter
+                "X-Title": "AI Resume Builder", // Optional
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                "model": "google/gemini-2.0-flash-001", // Using Gemini 2.0 via OpenRouter for high speed/low cost
+                "messages": [
+                    { "role": "user", "content": prompt }
+                ]
+            })
+        });
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message || "OpenRouter error");
+        return data.choices[0].message.content;
+    } catch (error) {
+        console.error("OpenRouter Error:", error);
+        throw error;
+    }
+}
+
 window.humanizeCoverLetter = humanizeCoverLetter;
