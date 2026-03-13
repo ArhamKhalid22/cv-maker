@@ -519,8 +519,8 @@ async function regenerateSection(sectionType) {
         return;
     }
 
-    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY) || "AIzaSyCSSrMouOrS5MYI66trTWLy1KOxAfX7Rdk";
     const openRouterKey = localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY);
+    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
 
     const originalText = btn.innerHTML;
     btn.disabled = true;
@@ -533,13 +533,16 @@ async function regenerateSection(sectionType) {
             .filter(Boolean);
 
         const prompt = `
-          Regenerate the "${sectionType}" section for an ATS-optimized resume.
+          Regenerate the "${sectionType}" section for an ATS-optimized resume based on the Job Description provided.
+          CRITICAL INSTRUCTION: You MUST generate a COMPLETELY NEW, UNIQUELY PARAPHRASED response. Do NOT simply repeat the 'Current Section Data'. Rewrite it from scratch to be highly tailored and relevant specifically to the Job Description requirements.
+
           User Info - Title: ${resumeData.title}, Name: ${userName}
           Job Description: ${jobDescription}
-          Current Section Data: ${JSON.stringify(resumeData[sectionType] || {})}
+          Current Section Data (DO NOT COPY THIS! Write a better, paraphrased version): 
+          ${JSON.stringify(resumeData[sectionType] || {})}
           Other Context - Skills: ${skillNames.join(', ')}
           
-          Return ONLY the new content for this section as valid JSON.
+          Return ONLY the new paraphrased content for this section as valid JSON.
           - For "skills": return a JSON array of objects like [{"name": "Skill Name", "description": "Brief description"}]
           - For "experience": return a JSON array of objects like [{"position": "Title", "company": "Co", "location": "Loc", "period": "Dates", "responsibilities": ["Bullet 1", "Bullet 2"]}]
           - For "achievements": return a JSON array of achievement strings
@@ -683,8 +686,8 @@ async function humanizeCoverLetter() {
         return;
     }
 
-    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY) || "AIzaSyCSSrMouOrS5MYI66trTWLy1KOxAfX7Rdk";
     const openRouterKey = localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY);
+    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
 
     humanizeBtn.disabled = true;
     humanizeBtn.innerHTML = 'Humanizing... <span class="loading"></span>';
@@ -730,8 +733,8 @@ async function analyzeJobDescription() {
         return;
     }
 
-    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY) || "AIzaSyCSSrMouOrS5MYI66trTWLy1KOxAfX7Rdk";
     const openRouterKey = localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY);
+    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
 
     analyzeBtn.disabled = true;
     analyzeBtn.innerHTML = 'Analyzing... <span class="loading"></span>';
