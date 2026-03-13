@@ -753,14 +753,7 @@ async function analyzeJobDescription() {
             "suggestedTitle": "Professional Job Title",
             "professionalSummary": "A concise, 3-4 sentence ATS-optimized professional summary tailored to this role.",
             "recommendations": [{"type": "skills/technical/leadership", "message": "specific advice to pass ATS filters"}],
-            "suggestedCoverLetters": [
-              "Template 1: A traditional, formal professional cover letter.",
-              "Template 2: A modern, enthusiastic, and highly energetic cover letter.",
-              "Template 3: A concise, direct, and results-oriented cover letter.",
-              "Template 4: A creative, storytelling-based cover letter.",
-              "Template 5: A highly analytical, data-driven cover letter."
-            ] 
-            // IMPORTANT: For each cover letter, use the candidate's actual name '${userName || 'the candidate'}' instead of placeholders like [Your Name]. Incorporate relevant details from experience (${userExperience}) and education (${userEducation}). Avoid making up work history. End with Sincerely, followed by the candidate's real name.
+            "suggestedCoverLetter": "A full, professional, ready-to-use cover letter tailored to this role. IMPORTANT RULES: 1. Generate EXACTLY ONE cover letter. 2. Do NOT mention 'Template' or include any notes/metadata. 3. Use the candidate's actual name '${userName || 'the candidate'}' instead of placeholders like [Your Name]. 4. Incorporate relevant details from experience (${userExperience}) and education (${userEducation}). 5. Avoid making up work history. 6. End with Sincerely, followed by the candidate's real name."
           }
           Job Description: ${jobDescription}
         `;
@@ -860,38 +853,20 @@ function displayAnalysisResults(data) {
         saveContactInfo();
     }
 
-    if (data.suggestedCoverLetters && Array.isArray(data.suggestedCoverLetters)) {
+    if (data.suggestedCoverLetter) {
         const coverLetterTextarea = document.getElementById('cover-letter-text');
         if (coverLetterTextarea) {
             const actualName = document.getElementById('resume-name').value.trim() || 'Candidate';
             
-            // Format the 5 templates separated by clear headings
-            let combinedText = data.suggestedCoverLetters.map((letter, index) => {
-                let text = letter
-                    .replace(/\[Your Name\]/gi, actualName)
-                    .replace(/\[Your Full Name\]/gi, actualName)
-                    .replace(/\[Full Name\]/gi, actualName)
-                    .replace(/\[Name\]/gi, actualName)
-                    .replace(/\[Candidate Name\]/gi, actualName);
-                return `=========================================\nTEMPLATE ${index + 1}\n=========================================\n\n${text.trim()}\n\n`;
-            }).join('\n');
-            
-            coverLetterTextarea.value = combinedText;
-            document.getElementById('cover-letter-enabled').checked = true;
-            document.getElementById('cover-letter-content').classList.remove('hidden');
-        }
-    } else if (data.suggestedCoverLetter) {
-        // Fallback for older single-letter responses
-        const coverLetterTextarea = document.getElementById('cover-letter-text');
-        if (coverLetterTextarea) {
-            const actualName = document.getElementById('resume-name').value.trim() || 'Candidate';
+            // Clean up any remaining placeholders that the AI might have accidentally generated
             let coverText = data.suggestedCoverLetter
                 .replace(/\[Your Name\]/gi, actualName)
                 .replace(/\[Your Full Name\]/gi, actualName)
                 .replace(/\[Full Name\]/gi, actualName)
                 .replace(/\[Name\]/gi, actualName)
                 .replace(/\[Candidate Name\]/gi, actualName);
-            coverLetterTextarea.value = coverText;
+                
+            coverLetterTextarea.value = coverText.trim();
             document.getElementById('cover-letter-enabled').checked = true;
             document.getElementById('cover-letter-content').classList.remove('hidden');
         }
