@@ -1145,22 +1145,24 @@ function _checkPageBreak(doc, y, margin, pageHeight) {
 
 // Core PDF builder using jsPDF directly
 function _buildPDFWithJsPDF(resumeData, sections, filename) {
-    // Access jsPDF from the html2pdf bundle
-    const { jsPDF } = window.jspdf || {};
-    let doc;
-    if (jsPDF) {
-        doc = new jsPDF({ unit: 'pt', format: 'letter' });
-    } else {
-        // Fallback: try to get jsPDF from html2pdf's internal bundle
-        try {
-            doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' });
-        } catch(e) {
-            // Last resort: create via html2pdf worker
-            const tmpDoc = window.html2pdf().set({}).from('<p></p>');
-            alert('jsPDF not found. Please ensure html2pdf.js is loaded.');
-            return;
-        }
+    // Access jsPDF constructor safely
+    let jsPDF;
+    if (window.jspdf && window.jspdf.jsPDF) {
+        jsPDF = window.jspdf.jsPDF;
+    } else if (window.jspdf) {
+        jsPDF = window.jspdf;
+    } else if (window.html2pdf && window.html2pdf.Worker && window.html2pdf.Worker.prototype.pdf) {
+        // Some versions of html2pdf bundle it differently
+        jsPDF = window.jspdf.jsPDF;
     }
+
+    if (!jsPDF) {
+        alert('PDF library (jsPDF) not found. Please ensure the page is fully loaded and you have an internet connection.');
+        console.error('jsPDF not found in window.jspdf or window');
+        return;
+    }
+
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
     const pageWidth = doc.internal.pageSize.getWidth();   // ~612
     const pageHeight = doc.internal.pageSize.getHeight();  // ~792
@@ -1328,26 +1330,36 @@ async function generateResumePDF() {
         const resumeData = collectResumeData();
         const sections = [];
 
-        if (resumeData.profile.enabled && resumeData.profile.content) {
+        console.log('[PDF Debug] resumeData:', JSON.stringify(resumeData, null, 2));
+
+        // Include sections if they have content (ignore toggle – always include data that exists)
+        if (resumeData.profile.content) {
             sections.push({ title: 'Professional Summary', type: 'text', content: resumeData.profile.content });
         }
-        if (resumeData.experience.enabled && resumeData.experience.items.length > 0) {
+        if (resumeData.experience.items.length > 0) {
             sections.push({ title: 'Work Experience', type: 'experience', items: resumeData.experience.items });
         }
-        if (resumeData.skills.enabled && resumeData.skills.items.length > 0) {
+        if (resumeData.skills.items.length > 0) {
             sections.push({ title: 'Skills', type: 'inline', items: resumeData.skills.items.slice(0, 5) });
         }
-        if (resumeData.education.enabled && resumeData.education.items.length > 0) {
+        if (resumeData.education.items.length > 0) {
             sections.push({ title: 'Education', type: 'education', items: resumeData.education.items });
         }
-        if (resumeData.achievements.enabled && resumeData.achievements.items.length > 0) {
+        if (resumeData.achievements.items.length > 0) {
             sections.push({ title: 'Achievements', type: 'bullets', items: resumeData.achievements.items });
         }
-        if (resumeData.languages.enabled && resumeData.languages.items.length > 0) {
+        if (resumeData.languages.items.length > 0) {
             sections.push({ title: 'Languages', type: 'inline', items: resumeData.languages.items });
         }
-        if (resumeData.reference.enabled && resumeData.reference.content) {
+        if (resumeData.reference.content) {
             sections.push({ title: 'Reference', type: 'text', content: resumeData.reference.content });
+        }
+
+        console.log('[PDF Debug] sections to render:', sections.length, sections.map(s => s.title));
+
+        if (sections.length === 0) {
+            alert('No content to include in the PDF. Please fill in some sections or analyze a job description first.');
+            return;
         }
 
         const targetCompany = document.getElementById('target-company')?.value.trim();
@@ -1396,7 +1408,18 @@ async function generateCoverLetterPDF() {
 
     try {
         const resumeData = collectResumeData();
-        const { jsPDF } = window.jspdf;
+        
+        let jsPDF;
+        if (window.jspdf && window.jspdf.jsPDF) {
+            jsPDF = window.jspdf.jsPDF;
+        } else if (window.jspdf) {
+            jsPDF = window.jspdf;
+        }
+
+        if (!jsPDF) {
+            throw new Error("jsPDF library not found");
+        }
+
         const doc = new jsPDF({ unit: 'pt', format: 'letter' });
 
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -1557,90 +1580,80 @@ function collectResumeData() {
         }
     };
 
-    // Collect achievements
-    if (data.achievements.enabled) {
-        const achievementCards = document.querySelectorAll('#achievements-list .item-card');
-        achievementCards.forEach(card => {
-            const input = card.querySelector('input[name="achievement"]');
-            if (input && input.value.trim()) {
-                data.achievements.items.push(input.value.trim());
+    // Always collect achievements (regardless of toggle)
+    const achievementCards = document.querySelectorAll('#achievements-list .item-card');
+    achievementCards.forEach(card => {
+        const input = card.querySelector('input[name="achievement"]');
+        if (input && input.value.trim()) {
+            data.achievements.items.push(input.value.trim());
+        }
+    });
+
+    // Always collect languages
+    const languageCards = document.querySelectorAll('#languages-list .item-card');
+    languageCards.forEach(card => {
+        const input = card.querySelector('input[name="language"]');
+        if (input && input.value.trim()) {
+            data.languages.items.push(input.value.trim());
+        }
+    });
+
+    // Always collect skills with descriptions
+    const skillCards = document.querySelectorAll('#skills-list .item-card');
+    skillCards.forEach(card => {
+        const nameInput = card.querySelector('input[name="skill-name"]');
+        const descInput = card.querySelector('input[name="skill-desc"]');
+        const name = nameInput ? nameInput.value.trim() : '';
+        const desc = descInput ? descInput.value.trim() : '';
+        if (name) {
+            // Format: "Skill Name - Description" or just "Skill Name" if no description
+            data.skills.items.push(desc ? `${name} - ${desc}` : name);
+        }
+    });
+
+    // Always collect education
+    const educationCards = document.querySelectorAll('#education-list .item-card');
+    educationCards.forEach(card => {
+        const inputs = card.querySelectorAll('input[name]');
+        const edu = {};
+        inputs.forEach(input => {
+            const value = input.value.trim();
+            if (value) {
+                edu[input.name] = value;
             }
         });
-    }
+        if (Object.keys(edu).length > 0) {
+            data.education.items.push(edu);
+        }
+    });
 
-    // Collect languages
-    if (data.languages.enabled) {
-        const languageCards = document.querySelectorAll('#languages-list .item-card');
-        languageCards.forEach(card => {
-            const input = card.querySelector('input[name="language"]');
-            if (input && input.value.trim()) {
-                data.languages.items.push(input.value.trim());
+    // Always collect experience
+    const experienceCards = document.querySelectorAll('#experience-list .item-card');
+    experienceCards.forEach(card => {
+        const inputs = card.querySelectorAll('input[name]');
+        const exp = {
+            responsibilities: []
+        };
+        inputs.forEach(input => {
+            const value = input.value.trim();
+            if (value) {
+                exp[input.name] = value;
             }
         });
-    }
 
-    // Collect skills with descriptions
-    if (data.skills.enabled) {
-        const skillCards = document.querySelectorAll('#skills-list .item-card');
-        skillCards.forEach(card => {
-            const nameInput = card.querySelector('input[name="skill-name"]');
-            const descInput = card.querySelector('input[name="skill-desc"]');
-            const name = nameInput ? nameInput.value.trim() : '';
-            const desc = descInput ? descInput.value.trim() : '';
-            if (name) {
-                // Format: "Skill Name - Description" or just "Skill Name" if no description
-                data.skills.items.push(desc ? `${name} - ${desc}` : name);
+        // Collect responsibilities
+        const respInputs = card.querySelectorAll('.responsibility-item input');
+        respInputs.forEach(input => {
+            const value = input.value.trim();
+            if (value) {
+                exp.responsibilities.push(value);
             }
         });
-    }
 
-    // Collect education
-    if (data.education.enabled) {
-        const educationCards = document.querySelectorAll('#education-list .item-card');
-        educationCards.forEach(card => {
-            const inputs = card.querySelectorAll('input[name]');
-            const edu = {};
-            inputs.forEach(input => {
-                const value = input.value.trim();
-                if (value) {
-                    edu[input.name] = value;
-                }
-            });
-            if (Object.keys(edu).length > 0) {
-                data.education.items.push(edu);
-            }
-        });
-    }
-
-    // Collect experience
-    if (data.experience.enabled) {
-        const experienceCards = document.querySelectorAll('#experience-list .item-card');
-        experienceCards.forEach(card => {
-            const inputs = card.querySelectorAll('input[name]');
-            const exp = {
-                responsibilities: []
-            };
-            inputs.forEach(input => {
-                const value = input.value.trim();
-                if (value) {
-                    exp[input.name] = value;
-                }
-            });
-
-            // Collect responsibilities
-            const respInputs = card.querySelectorAll('.responsibility-item input');
-            respInputs.forEach(input => {
-                const value = input.value.trim();
-                if (value) {
-                    exp.responsibilities.push(value);
-                }
-            });
-
-            if (Object.keys(exp).length > 1 || exp.responsibilities.length > 0) {
-                data.experience.items.push(exp);
-            }
-        });
-    }
+        if (Object.keys(exp).length > 1 || exp.responsibilities.length > 0) {
+            data.experience.items.push(exp);
+        }
+    });
 
     return data;
 }

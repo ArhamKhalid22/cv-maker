@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <h1>PDF Generation Test</h1>
+    <button id="test-btn" onclick="testPDF()">Generate Test PDF</button>
+    <pre id="log"></pre>
+
+    <script>
+    function log(msg) {
+        document.getElementById('log').textContent += msg + '\n';
+        console.log(msg);
+    }
+
+    function testPDF() {
+        log('Starting PDF generation...');
+        
+        try {
+            log('window.jspdf type: ' + typeof window.jspdf);
+            log('window.jspdf.jsPDF type: ' + typeof window.jspdf.jsPDF);
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+            
+            log('jsPDF doc created successfully');
+            
+            // Write content
+            doc.setFont('times', 'bold');
+            doc.setFontSize(22);
+            doc.setTextColor(0, 0, 0);
+            doc.text('Ali Khalid', 50, 50);
+            
+            doc.setFont('times', 'normal');
+            doc.setFontSize(14);
+            doc.text('Software Developer', 50, 75);
+            
+            doc.setFontSize(9);
+            doc.text('ali@example.com  |  +1234567890  |  Vilnius, Lithuania', 50, 95);
+            
+            // Divider
+            doc.setDrawColor(0, 0, 0);
+            doc.setLineWidth(1);
+            doc.line(50, 105, 562, 105);
+            
+            // Summary
+            doc.setFont('times', 'bold');
+            doc.setFontSize(13);
+            doc.text('PROFESSIONAL SUMMARY', 50, 125);
+            doc.setLineWidth(0.5);
+            doc.line(50, 128, 562, 128);
+            
+            doc.setFont('times', 'normal');
+            doc.setFontSize(11);
+            const summary = doc.splitTextToSize('Experienced software developer with 3 years of Python and JavaScript expertise. Passionate about building scalable web applications and contributing to open-source projects.', 512);
+            let y = 142;
+            summary.forEach(line => {
+                doc.text(line, 50, y);
+                y += 14;
+            });
+            
+            // Skills
+            y += 10;
+            doc.setFont('times', 'bold');
+            doc.setFontSize(13);
+            doc.text('SKILLS', 50, y);
+            y += 3;
+            doc.setLineWidth(0.5);
+            doc.line(50, y, 562, y);
+            y += 12;
+            
+            doc.setFont('times', 'normal');
+            doc.setFontSize(11);
+            doc.text('Python  •  JavaScript  •  React  •  Node.js  •  SQL', 50, y);
+            
+            doc.save('TEST_Resume.pdf');
+            log('✅ PDF saved successfully as TEST_Resume.pdf');
+            
+        } catch (error) {
+            log('❌ ERROR: ' + error.message);
+            log('Stack: ' + error.stack);
+        }
+    }
+    </script>
+</body>
+</html>
