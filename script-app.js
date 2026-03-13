@@ -520,7 +520,7 @@ async function regenerateSection(sectionType) {
     }
 
     const openRouterKey = localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY);
-    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
+    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY) || "AIzaSyCSSrMouOrS5MYI66trTWLy1KOxAfX7Rdk";
 
     const originalText = btn.innerHTML;
     btn.disabled = true;
@@ -687,7 +687,7 @@ async function humanizeCoverLetter() {
     }
 
     const openRouterKey = localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY);
-    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
+    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY) || "AIzaSyCSSrMouOrS5MYI66trTWLy1KOxAfX7Rdk";
 
     humanizeBtn.disabled = true;
     humanizeBtn.innerHTML = 'Humanizing... <span class="loading"></span>';
@@ -734,7 +734,7 @@ async function analyzeJobDescription() {
     }
 
     const openRouterKey = localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY);
-    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
+    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY) || "AIzaSyCSSrMouOrS5MYI66trTWLy1KOxAfX7Rdk";
 
     analyzeBtn.disabled = true;
     analyzeBtn.innerHTML = 'Analyzing... <span class="loading"></span>';
