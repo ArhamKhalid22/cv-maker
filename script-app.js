@@ -535,7 +535,7 @@ async function regenerateSection(sectionType) {
           
           Return ONLY the new content for this section as valid JSON.
           - For "skills": return a JSON array of objects like [{"name": "Skill Name", "description": "Brief description"}]
-          - For "experience": return a JSON array of experience objects
+          - For "experience": return a JSON array of objects like [{"position": "Title", "company": "Co", "location": "Loc", "period": "Dates", "responsibilities": ["Bullet 1", "Bullet 2"]}]
           - For "achievements": return a JSON array of achievement strings
           - For "summary" or "cover-letter": return plain text
         `;
@@ -557,9 +557,17 @@ async function regenerateSection(sectionType) {
 
         let content;
         try {
-            const jsonMatch = text.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
-            content = jsonMatch ? JSON.parse(jsonMatch[0]) : text.trim();
+            // Check if the AI wrapped the response in markdown code blocks
+            const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+            const jsonString = jsonMatch ? jsonMatch[1].trim() : text.trim();
+            
+            // Try matching bracket structures if it's not explicitly in a block
+            const bracketMatch = jsonString.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
+            const finalStringToParse = bracketMatch ? bracketMatch[0] : jsonString;
+            
+            content = JSON.parse(finalStringToParse);
         } catch (e) {
+            console.warn("Could not parse as JSON. Using raw text.", e);
             content = text.trim();
         }
 
@@ -581,6 +589,12 @@ function applyRegeneratedData(sectionType, content) {
             break;
         case 'skills':
             document.getElementById('skills-list').innerHTML = '';
+            
+            // If AI returned a string instead of JSON array, try to split it into a list
+            if (typeof content === 'string') {
+                content = content.split('\n').map(s => s.trim().replace(/^[-*•\d.]+\s*/, '')).filter(Boolean);
+            }
+
             if (Array.isArray(content)) {
                 const seen = new Set();
                 content.forEach(skill => {
@@ -606,13 +620,42 @@ function applyRegeneratedData(sectionType, content) {
             break;
         case 'experience':
             document.getElementById('experience-list').innerHTML = '';
+            
+            if (typeof content === 'string') {
+                 // Try parsing a generic text block into a single experience object
+                 content = [{
+                     position: "Regenerated Role",
+                     company: "Regenerated Company",
+                     location: "",
+                     period: "",
+                     responsibilities: content.split('\n').map(l => l.trim().replace(/^[-*•\d.]+\s*/, '')).filter(Boolean)
+                 }];
+            }
+
             if (Array.isArray(content)) {
-                content.forEach(exp => addExperienceItem(exp));
+                content.forEach(exp => {
+                    // Normalize keys just in case AI uses slightly different names
+                    const normalizedExp = {
+                        position: exp.position || exp.title || exp.role || '',
+                        company: exp.company || exp.employer || exp.org || '',
+                        location: exp.location || '',
+                        period: exp.period || exp.dates || exp.duration || '',
+                        responsibilities: Array.isArray(exp.responsibilities) ? exp.responsibilities : 
+                                         (Array.isArray(exp.bullets) ? exp.bullets : 
+                                         (Array.isArray(exp.highlights) ? exp.highlights : []))
+                    };
+                    addExperienceItem(normalizedExp);
+                });
             }
             saveExperience();
             break;
         case 'achievements':
             document.getElementById('achievements-list').innerHTML = '';
+            
+            if (typeof content === 'string') {
+                content = content.split('\n').map(s => s.trim().replace(/^[-*•\d.]+\s*/, '')).filter(Boolean);
+            }
+
             if (Array.isArray(content)) {
                 content.forEach(ach => addAchievementItem(ach));
             }
@@ -688,10 +731,15 @@ async function analyzeJobDescription() {
     analyzeBtn.innerHTML = 'Analyzing... <span class="loading"></span>';
 
     try {
+        const resumeData = collectResumeData();
+        const userExperience = JSON.stringify(resumeData.experience || {});
+        const userEducation = JSON.stringify(resumeData.education || {});
+
         const prompt = `
           Analyze the following job description and extract key information for an ATS-optimized resume.
           Return ONLY a valid JSON object with the following structure:
           {
+            "companyName": "The name of the company hiring, if mentioned (otherwise an empty string)",
             "extractedSkills": ["skill1", "skill2", ...],
             "extractedKeywords": [{"skill": "skill1", "category": "technical/soft/management/etc"}],
             "educationRequirements": ["degree1", ...],
@@ -699,7 +747,7 @@ async function analyzeJobDescription() {
             "suggestedTitle": "Professional Job Title",
             "professionalSummary": "A concise, 3-4 sentence ATS-optimized professional summary tailored to this role.",
             "recommendations": [{"type": "skills/technical/leadership", "message": "specific advice to pass ATS filters"}],
-            "suggestedCoverLetter": "A full professional cover letter tailored to this role. IMPORTANT: Use the candidate's actual name '${userName || 'the candidate'}' instead of placeholders like [Your Name]. End with Sincerely, followed by the candidate's real name."
+            "suggestedCoverLetter": "A full professional cover letter tailored to this role. IMPORTANT: Use the candidate's actual name '${userName || 'the candidate'}' instead of placeholders like [Your Name]. Incorporate relevant details from the candidate's experience (${userExperience}) and education (${userEducation}) to show why they are a great fit. Avoid making up work history. End with Sincerely, followed by the candidate's real name."
           }
           Job Description: ${jobDescription}
         `;
@@ -716,10 +764,26 @@ async function analyzeJobDescription() {
         } else {
             throw new Error("No API key found. Please configure OpenRouter or Gemini on the landing page.");
         }
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-
+        // Check if the AI wrapped the response in markdown code blocks
+        const mdMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        const jsonString = mdMatch ? mdMatch[1].trim() : text.trim();
+        
+        const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("Could not parse AI response");
         const data = JSON.parse(jsonMatch[0]);
+
+        if (data.companyName) {
+            const companyInput = document.getElementById('target-company');
+            if (companyInput && !companyInput.value) {
+                companyInput.value = data.companyName;
+            }
+        }
+        if (data.suggestedTitle) {
+            const roleInput = document.getElementById('target-role');
+            if (roleInput && !roleInput.value) {
+                roleInput.value = data.suggestedTitle;
+            }
+        }
 
         analysisResults = data;
         displayAnalysisResults(data);
@@ -1286,7 +1350,14 @@ async function generateResumePDF() {
             sections.push({ title: 'Reference', type: 'text', content: resumeData.reference.content });
         }
 
-        const filename = `${name.replace(/\s+/g, '_')}_Resume.pdf`;
+        const targetCompany = document.getElementById('target-company')?.value.trim();
+        
+        let filename;
+        if (targetCompany) {
+            filename = `${targetCompany.replace(/\s+/g, '_')}_Resume.pdf`;
+        } else {
+            filename = `${name.replace(/\s+/g, '_')}_Resume.pdf`;
+        }
         _buildPDFWithJsPDF(resumeData, sections, filename);
         showMessage('Resume PDF generated successfully!', 'success');
     } catch (error) {
@@ -1420,7 +1491,15 @@ async function generateCoverLetterPDF() {
             doc.text(resumeData.name, margin, y);
         }
 
-        const filename = `${name.replace(/\s+/g, '_')}_CoverLetter.pdf`;
+        const targetCompany = document.getElementById('target-company')?.value.trim();
+        
+        let filename;
+        if (targetCompany) {
+            filename = `${targetCompany.replace(/\s+/g, '_')}_CoverLetter.pdf`;
+        } else {
+            const baseName = name.replace(/\s+/g, '_') || 'Applicant';
+            filename = `${baseName}_CoverLetter.pdf`;
+        }
         doc.save(filename);
         showMessage('Cover Letter PDF generated successfully!', 'success');
     } catch (error) {
