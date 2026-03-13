@@ -513,8 +513,8 @@ async function regenerateSection(sectionType) {
         return;
     }
 
-    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
-    const openRouterKey = "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";
+    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY) || "AIzaSyCSSrMouOrS5MYI66trTWLy1KOxAfX7Rdk";
+    const openRouterKey = localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY);
 
     const originalText = btn.innerHTML;
     btn.disabled = true;
@@ -677,8 +677,8 @@ async function humanizeCoverLetter() {
         return;
     }
 
-    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
-    const openRouterKey = "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";
+    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY) || "AIzaSyCSSrMouOrS5MYI66trTWLy1KOxAfX7Rdk";
+    const openRouterKey = localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY);
 
     humanizeBtn.disabled = true;
     humanizeBtn.innerHTML = 'Humanizing... <span class="loading"></span>';
@@ -724,8 +724,8 @@ async function analyzeJobDescription() {
         return;
     }
 
-    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY);
-    const openRouterKey = "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";
+    const geminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_API_KEY) || "AIzaSyCSSrMouOrS5MYI66trTWLy1KOxAfX7Rdk";
+    const openRouterKey = localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY);
 
     analyzeBtn.disabled = true;
     analyzeBtn.innerHTML = 'Analyzing... <span class="loading"></span>';
