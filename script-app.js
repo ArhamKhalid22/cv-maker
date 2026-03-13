@@ -67,6 +67,12 @@ const STORAGE_KEYS = {
     UNDETECTABLE_API_KEY: 'undetectable_api_key'
 };
 
+// Prevent the app from using the revoked OpenRouter key that might be stuck in the user's browser localStorage
+const revokedOpenRouterKey = "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";
+if (localStorage.getItem(STORAGE_KEYS.OPENROUTER_API_KEY) === revokedOpenRouterKey) {
+    localStorage.removeItem(STORAGE_KEYS.OPENROUTER_API_KEY);
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     // Check authentication first (disabled for now)
