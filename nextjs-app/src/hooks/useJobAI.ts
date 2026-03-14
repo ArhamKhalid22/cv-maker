@@ -12,7 +12,8 @@ export function useJobAI() {
 
   const generate = useCallback(
     async (type: 'cv' | 'cover' | 'skills', forceNewSeed?: boolean) => {
-      const { jobDescription, userBackground, education, skills, achievements, fullName } = store;
+      const { jobDescription, userBackground, education, hardSkills, softSkills, achievements, fullName } = store;
+      const skills = [hardSkills, softSkills].filter(Boolean).join(', ');
 
       if (!jobDescription.trim()) {
         toast.error('Please enter a job description first');

@@ -23,13 +23,18 @@ export interface SkillsAnalysis {
 export interface Application {
   id: string;
   fullName?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  linkedin?: string;
   jobTitle: string;
   company: string;
   jobUrl?: string;
   jobDescription: string;
   userBackground: string;
   education?: string;
-  skills?: string;
+  hardSkills?: string;
+  softSkills?: string;
   achievements?: string;
   generatedCV?: string;
   coverLetter?: string;
@@ -41,72 +46,93 @@ export interface Application {
 }
 
 interface AppState {
-  // Current inputs
-  fullName: string;        // NEW — used in cover letter sign-off
+  // ── Personal Identity ──
+  fullName: string;
+  email: string;
+  phone: string;
+  city: string;
+  linkedin: string;
+
+  // ── Job Info ──
   jobDescription: string;
-  userBackground: string;
-  education: string;
-  skills: string;
-  achievements: string;
   jobTitle: string;
   company: string;
   jobUrl: string;
 
-  // Generation results
+  // ── Profile ──
+  userBackground: string;
+  education: string;
+  hardSkills: string;
+  softSkills: string;
+  achievements: string;
+
+  // ── Generation Results ──
   generatedCV: string;
   coverLetter: string;
   skillsAnalysis: SkillsAnalysis | null;
 
-  // Loading states
+  // ── Statuses ──
   cvStatus: GenerationStatus;
   coverStatus: GenerationStatus;
   skillsStatus: GenerationStatus;
-
-  // Errors
   cvError: string | null;
   coverError: string | null;
   skillsError: string | null;
 
-  // Applications history
+  // ── History ──
   applications: Application[];
 
-  // Actions
-  setFullName: (name: string) => void;
-  setJobDescription: (text: string) => void;
-  setUserBackground: (text: string) => void;
-  setEducation: (text: string) => void;
-  setSkills: (text: string) => void;
-  setAchievements: (text: string) => void;
-  setJobTitle: (title: string) => void;
-  setCompany: (company: string) => void;
-  setJobUrl: (url: string) => void;
-  setGeneratedCV: (cv: string) => void;
-  setCoverLetter: (cover: string) => void;
-  setSkillsAnalysis: (skills: SkillsAnalysis | null) => void;
-  setCvStatus: (status: GenerationStatus) => void;
-  setCoverStatus: (status: GenerationStatus) => void;
-  setSkillsStatus: (status: GenerationStatus) => void;
-  setCvError: (error: string | null) => void;
-  setCoverError: (error: string | null) => void;
-  setSkillsError: (error: string | null) => void;
-  saveApplication: () => void;
+  // ── Actions ──
+  setFullName:       (v: string) => void;
+  setEmail:          (v: string) => void;
+  setPhone:          (v: string) => void;
+  setCity:           (v: string) => void;
+  setLinkedin:       (v: string) => void;
+  setJobDescription: (v: string) => void;
+  setJobTitle:       (v: string) => void;
+  setCompany:        (v: string) => void;
+  setJobUrl:         (v: string) => void;
+  setUserBackground: (v: string) => void;
+  setEducation:      (v: string) => void;
+  setHardSkills:     (v: string) => void;
+  setSoftSkills:     (v: string) => void;
+  setSkills:         (v: string) => void;  // alias → sets hardSkills
+  setAchievements:   (v: string) => void;
+  setGeneratedCV:    (v: string) => void;
+  setCoverLetter:    (v: string) => void;
+  setSkillsAnalysis: (v: SkillsAnalysis | null) => void;
+  setCvStatus:       (v: GenerationStatus) => void;
+  setCoverStatus:    (v: GenerationStatus) => void;
+  setSkillsStatus:   (v: GenerationStatus) => void;
+  setCvError:        (v: string | null) => void;
+  setCoverError:     (v: string | null) => void;
+  setSkillsError:    (v: string | null) => void;
+  saveApplication:   () => void;
   updateApplication: (id: string, updates: Partial<Application>) => void;
   deleteApplication: (id: string) => void;
   clearCurrentGeneration: () => void;
+
+  // Convenience getter for skills (hard+soft combined)
+  readonly skills: string;
 }
 
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       fullName: '',
+      email: '',
+      phone: '',
+      city: '',
+      linkedin: '',
       jobDescription: '',
-      userBackground: '',
-      education: '',
-      skills: '',
-      achievements: '',
       jobTitle: '',
       company: '',
       jobUrl: '',
+      userBackground: '',
+      education: '',
+      hardSkills: '',
+      softSkills: '',
+      achievements: '',
       generatedCV: '',
       coverLetter: '',
       skillsAnalysis: null,
@@ -118,24 +144,36 @@ export const useAppStore = create<AppState>()(
       skillsError: null,
       applications: [],
 
-      setFullName:       (name)   => set({ fullName: name }),
-      setJobDescription: (text)   => set({ jobDescription: text }),
-      setUserBackground: (text)   => set({ userBackground: text }),
-      setEducation:      (text)   => set({ education: text }),
-      setSkills:         (text)   => set({ skills: text }),
-      setAchievements:   (text)   => set({ achievements: text }),
-      setJobTitle:       (title)  => set({ jobTitle: title }),
-      setCompany:        (company)=> set({ company }),
-      setJobUrl:         (url)    => set({ jobUrl: url }),
-      setGeneratedCV:    (cv)     => set({ generatedCV: cv }),
-      setCoverLetter:    (cover)  => set({ coverLetter: cover }),
-      setSkillsAnalysis: (skills) => set({ skillsAnalysis: skills }),
-      setCvStatus:       (status) => set({ cvStatus: status }),
-      setCoverStatus:    (status) => set({ coverStatus: status }),
-      setSkillsStatus:   (status) => set({ skillsStatus: status }),
-      setCvError:        (error)  => set({ cvError: error }),
-      setCoverError:     (error)  => set({ coverError: error }),
-      setSkillsError:    (error)  => set({ skillsError: error }),
+      get skills() {
+        const s = get();
+        const parts = [s.hardSkills, s.softSkills].filter(Boolean);
+        return parts.join(', ');
+      },
+
+      setFullName:       (v) => set({ fullName: v }),
+      setEmail:          (v) => set({ email: v }),
+      setPhone:          (v) => set({ phone: v }),
+      setCity:           (v) => set({ city: v }),
+      setLinkedin:       (v) => set({ linkedin: v }),
+      setJobDescription: (v) => set({ jobDescription: v }),
+      setJobTitle:       (v) => set({ jobTitle: v }),
+      setCompany:        (v) => set({ company: v }),
+      setJobUrl:         (v) => set({ jobUrl: v }),
+      setUserBackground: (v) => set({ userBackground: v }),
+      setEducation:      (v) => set({ education: v }),
+      setHardSkills:     (v) => set({ hardSkills: v }),
+      setSoftSkills:     (v) => set({ softSkills: v }),
+      setSkills:         (v) => set({ hardSkills: v }),
+      setAchievements:   (v) => set({ achievements: v }),
+      setGeneratedCV:    (v) => set({ generatedCV: v }),
+      setCoverLetter:    (v) => set({ coverLetter: v }),
+      setSkillsAnalysis: (v) => set({ skillsAnalysis: v }),
+      setCvStatus:       (v) => set({ cvStatus: v }),
+      setCoverStatus:    (v) => set({ coverStatus: v }),
+      setSkillsStatus:   (v) => set({ skillsStatus: v }),
+      setCvError:        (v) => set({ cvError: v }),
+      setCoverError:     (v) => set({ coverError: v }),
+      setSkillsError:    (v) => set({ skillsError: v }),
 
       saveApplication: () => {
         const s = get();
@@ -143,13 +181,18 @@ export const useAppStore = create<AppState>()(
         const application: Application = {
           id:             crypto.randomUUID(),
           fullName:       s.fullName,
+          email:          s.email,
+          phone:          s.phone,
+          city:           s.city,
+          linkedin:       s.linkedin,
           jobTitle:       s.jobTitle       || 'Untitled Position',
           company:        s.company        || 'Unknown Company',
           jobUrl:         s.jobUrl,
           jobDescription: s.jobDescription,
           userBackground: s.userBackground,
           education:      s.education,
-          skills:         s.skills,
+          hardSkills:     s.hardSkills,
+          softSkills:     s.softSkills,
           achievements:   s.achievements,
           generatedCV:    s.generatedCV,
           coverLetter:    s.coverLetter,
@@ -177,13 +220,14 @@ export const useAppStore = create<AppState>()(
       clearCurrentGeneration: () => {
         set({
           jobDescription: '',
-          userBackground: '',
-          education: '',
-          skills: '',
-          achievements: '',
           jobTitle: '',
           company: '',
           jobUrl: '',
+          userBackground: '',
+          education: '',
+          hardSkills: '',
+          softSkills: '',
+          achievements: '',
           generatedCV: '',
           coverLetter: '',
           skillsAnalysis: null,

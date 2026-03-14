@@ -52,11 +52,16 @@ export default function CVOutput() {
   };
 
   const handleDownloadPDF = () => {
-    const name    = store.fullName?.trim() || 'Your Name';
-    const job     = store.jobTitle?.trim() || '';
-    const company = store.company?.trim()  || '';
-    const edu     = store.education?.trim() || '';
-    const ach     = store.achievements?.trim() || '';
+    const name     = store.fullName?.trim()    || 'Your Name';
+    const job      = store.jobTitle?.trim()    || '';
+    const company  = store.company?.trim()     || '';
+    const edu      = store.education?.trim()   || '';
+    const ach      = store.achievements?.trim()|| '';
+    const email    = store.email?.trim()       || 'your.email@example.com';
+    const phone    = store.phone?.trim()       || '+00 0000 000000';
+    const city     = store.city?.trim()        || 'City, Country';
+    const linkedin = store.linkedin?.trim()    || '';
+    const combined = [store.hardSkills, store.softSkills].filter(Boolean).join(', ');
 
     const { summary, experience, skills } = parseCVSections(store.generatedCV);
 
@@ -74,11 +79,12 @@ export default function CVOutput() {
           .map(l => `<li>${l}</li>`).join('\n')
       : '';
 
-    // Skills from store (raw comma-separated) — if AI didn't return skills use store.skills
-    const skillsList = skills || store.skills?.trim() || '';
+    // Skills: prefer AI-extracted, fallback to store
+    const skillsList = skills || combined || '';
 
     const filename = `${nameToFilePart(name)}_CV`;
     const today = new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -187,7 +193,7 @@ export default function CVOutput() {
     <div class="cv-name">${name}</div>
     <div class="cv-meta">
       ${job ? `${job}${company ? ' · ' + company : ''}` : (company || '')}
-      &nbsp;·&nbsp; your.email@example.com &nbsp;·&nbsp; +44 0000 000000 &nbsp;·&nbsp; City, Country
+      &nbsp;·&nbsp; ${email} &nbsp;·&nbsp; ${phone} &nbsp;·&nbsp; ${city}${linkedin ? ` &nbsp;·&nbsp; <a href="https://${linkedin.replace(/^https?:\/\//,'')}" style="color:#555;">LinkedIn</a>` : ''}
     </div>
     <hr class="cv-divider"/>
   </div>
