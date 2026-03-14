@@ -7,7 +7,7 @@ import { callOpenRouter, type GenerationType } from '@/lib/openrouter';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { jobDescription, userBackground, type, regenerateSeed } = body;
+    const { jobDescription, userBackground, education, skills, achievements, fullName, type, regenerateSeed } = body;
 
     if (!jobDescription || !type) {
       return NextResponse.json(
@@ -24,8 +24,12 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await callOpenRouter({
+      fullName:       fullName       || '',
       jobDescription,
       userBackground: userBackground || '',
+      education:      education      || '',
+      skills:         skills         || '',
+      achievements:   achievements   || '',
       type: type as GenerationType,
       regenerateSeed,
     });

@@ -1,5 +1,4 @@
-// lib/store.ts
-// Zustand global state management
+// lib/store.ts — Zustand global state management
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -23,11 +22,15 @@ export interface SkillsAnalysis {
 
 export interface Application {
   id: string;
+  fullName?: string;
   jobTitle: string;
   company: string;
   jobUrl?: string;
   jobDescription: string;
   userBackground: string;
+  education?: string;
+  skills?: string;
+  achievements?: string;
   generatedCV?: string;
   coverLetter?: string;
   skillsAnalysis?: SkillsAnalysis;
@@ -38,9 +41,13 @@ export interface Application {
 }
 
 interface AppState {
-  // Current generation
+  // Current inputs
+  fullName: string;        // NEW — used in cover letter sign-off
   jobDescription: string;
   userBackground: string;
+  education: string;
+  skills: string;
+  achievements: string;
   jobTitle: string;
   company: string;
   jobUrl: string;
@@ -64,8 +71,12 @@ interface AppState {
   applications: Application[];
 
   // Actions
+  setFullName: (name: string) => void;
   setJobDescription: (text: string) => void;
   setUserBackground: (text: string) => void;
+  setEducation: (text: string) => void;
+  setSkills: (text: string) => void;
+  setAchievements: (text: string) => void;
   setJobTitle: (title: string) => void;
   setCompany: (company: string) => void;
   setJobUrl: (url: string) => void;
@@ -87,8 +98,12 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
+      fullName: '',
       jobDescription: '',
       userBackground: '',
+      education: '',
+      skills: '',
+      achievements: '',
       jobTitle: '',
       company: '',
       jobUrl: '',
@@ -103,41 +118,48 @@ export const useAppStore = create<AppState>()(
       skillsError: null,
       applications: [],
 
-      setJobDescription: (text) => set({ jobDescription: text }),
-      setUserBackground: (text) => set({ userBackground: text }),
-      setJobTitle: (title) => set({ jobTitle: title }),
-      setCompany: (company) => set({ company }),
-      setJobUrl: (url) => set({ jobUrl: url }),
-      setGeneratedCV: (cv) => set({ generatedCV: cv }),
-      setCoverLetter: (cover) => set({ coverLetter: cover }),
+      setFullName:       (name)   => set({ fullName: name }),
+      setJobDescription: (text)   => set({ jobDescription: text }),
+      setUserBackground: (text)   => set({ userBackground: text }),
+      setEducation:      (text)   => set({ education: text }),
+      setSkills:         (text)   => set({ skills: text }),
+      setAchievements:   (text)   => set({ achievements: text }),
+      setJobTitle:       (title)  => set({ jobTitle: title }),
+      setCompany:        (company)=> set({ company }),
+      setJobUrl:         (url)    => set({ jobUrl: url }),
+      setGeneratedCV:    (cv)     => set({ generatedCV: cv }),
+      setCoverLetter:    (cover)  => set({ coverLetter: cover }),
       setSkillsAnalysis: (skills) => set({ skillsAnalysis: skills }),
-      setCvStatus: (status) => set({ cvStatus: status }),
-      setCoverStatus: (status) => set({ coverStatus: status }),
-      setSkillsStatus: (status) => set({ skillsStatus: status }),
-      setCvError: (error) => set({ cvError: error }),
-      setCoverError: (error) => set({ coverError: error }),
-      setSkillsError: (error) => set({ skillsError: error }),
+      setCvStatus:       (status) => set({ cvStatus: status }),
+      setCoverStatus:    (status) => set({ coverStatus: status }),
+      setSkillsStatus:   (status) => set({ skillsStatus: status }),
+      setCvError:        (error)  => set({ cvError: error }),
+      setCoverError:     (error)  => set({ coverError: error }),
+      setSkillsError:    (error)  => set({ skillsError: error }),
 
       saveApplication: () => {
-        const state = get();
+        const s = get();
         const now = new Date().toISOString();
         const application: Application = {
-          id: crypto.randomUUID(),
-          jobTitle: state.jobTitle || 'Untitled Position',
-          company: state.company || 'Unknown Company',
-          jobUrl: state.jobUrl,
-          jobDescription: state.jobDescription,
-          userBackground: state.userBackground,
-          generatedCV: state.generatedCV,
-          coverLetter: state.coverLetter,
-          skillsAnalysis: state.skillsAnalysis || undefined,
-          matchScore: state.skillsAnalysis?.matchScore,
-          status: 'draft',
-          createdAt: now,
-          updatedAt: now,
+          id:             crypto.randomUUID(),
+          fullName:       s.fullName,
+          jobTitle:       s.jobTitle       || 'Untitled Position',
+          company:        s.company        || 'Unknown Company',
+          jobUrl:         s.jobUrl,
+          jobDescription: s.jobDescription,
+          userBackground: s.userBackground,
+          education:      s.education,
+          skills:         s.skills,
+          achievements:   s.achievements,
+          generatedCV:    s.generatedCV,
+          coverLetter:    s.coverLetter,
+          skillsAnalysis: s.skillsAnalysis || undefined,
+          matchScore:     s.skillsAnalysis?.matchScore,
+          status:         'draft',
+          createdAt:      now,
+          updatedAt:      now,
         };
-        set((s) => ({ applications: [application, ...s.applications] }));
-        return application.id;
+        set((prev) => ({ applications: [application, ...prev.applications] }));
       },
 
       updateApplication: (id, updates) => {
@@ -149,15 +171,16 @@ export const useAppStore = create<AppState>()(
       },
 
       deleteApplication: (id) => {
-        set((s) => ({
-          applications: s.applications.filter((app) => app.id !== id),
-        }));
+        set((s) => ({ applications: s.applications.filter((app) => app.id !== id) }));
       },
 
       clearCurrentGeneration: () => {
         set({
           jobDescription: '',
           userBackground: '',
+          education: '',
+          skills: '',
+          achievements: '',
           jobTitle: '',
           company: '',
           jobUrl: '',

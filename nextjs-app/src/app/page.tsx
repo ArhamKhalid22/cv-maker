@@ -1,4 +1,4 @@
-// src/app/page.tsx — Landing Page
+"use client";
 
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';

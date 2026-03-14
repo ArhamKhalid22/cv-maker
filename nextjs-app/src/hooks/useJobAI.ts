@@ -12,7 +12,7 @@ export function useJobAI() {
 
   const generate = useCallback(
     async (type: 'cv' | 'cover' | 'skills', forceNewSeed?: boolean) => {
-      const { jobDescription, userBackground } = store;
+      const { jobDescription, userBackground, education, skills, achievements, fullName } = store;
 
       if (!jobDescription.trim()) {
         toast.error('Please enter a job description first');
@@ -44,8 +44,12 @@ export function useJobAI() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            fullName,
             jobDescription,
             userBackground,
+            education,
+            skills,
+            achievements,
             type,
             regenerateSeed: seed,
           }),
