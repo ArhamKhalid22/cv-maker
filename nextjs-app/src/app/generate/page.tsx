@@ -22,21 +22,25 @@ export default function GeneratePage() {
   const { generateAll, cvStatus, coverStatus, skillsStatus } = useJobAI();
   const outputRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isAnyLoading = cvStatus === 'loading' || coverStatus === 'loading' || skillsStatus === 'loading';
   const hasOutput    = store.generatedCV || store.coverLetter || store.skillsAnalysis;
 
   const profileComplete = !!(store.fullName?.trim() && store.userBackground?.trim());
 
-  useEffect(() => {
-    // If arriving here with NO profile, show a toast suggestion
-    if (!profileComplete && !store.generatedCV) {
-      toast('Welcome! To get the best results, fill out your global Profile first.', {
-        icon: '👋',
-        duration: 5000,
-      });
-    }
-  }, [profileComplete, store.generatedCV]);
+  if (!mounted) return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      <Navbar />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <p style={{ color: 'var(--text-muted)' }}>Loading your profile...</p>
+      </div>
+    </div>
+  );
 
   const validate = (requiredMsg: string, condition: boolean) => {
     if (!condition) { toast.error(requiredMsg); return false; }

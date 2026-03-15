@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import Navbar from '@/components/Navbar';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 // ── Shared textarea style ────────────────────────────────────────────────────
 const TA: React.CSSProperties = {
@@ -43,6 +44,12 @@ function SectionTitle({ icon, title, sub }: { icon: string; title: string; sub: 
 export default function ProfilePage() {
   const store = useAppStore();
   const [isParsing, setIsParsing] = useState(false);
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleParseResume = async (text: string) => {
     if (!text.trim() || text.length < 50) {
@@ -79,6 +86,15 @@ export default function ProfilePage() {
       setIsParsing(false);
     }
   };
+
+  if (!mounted) return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      <Navbar />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <p style={{ color: 'var(--text-muted)' }}>Loading your profile...</p>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', paddingBottom: 60 }}>
@@ -209,7 +225,10 @@ BSc Computer Science, 2021-2025`}
         </div>
 
         <div style={{ marginTop: 30, display: 'flex', justifyContent: 'flex-end' }}>
-          <button className="btn btn-primary btn-lg" onClick={() => window.location.href = '/generate'}>
+          <button className="btn btn-primary btn-lg" onClick={() => {
+            toast.success('Global profile saved successfully!');
+            router.push('/generate');
+          }}>
             💾 Save & Go to Generate
           </button>
         </div>
