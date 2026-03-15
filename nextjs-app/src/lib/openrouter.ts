@@ -55,25 +55,34 @@ function buildPrompt(req: OpenRouterRequest): string {
   const ctx  = buildContext(req);
   const name = req.fullName?.trim() || 'Applicant';
 
+  const HONESTY = `CRITICAL HONESTY RULES:
+- Use ONLY information explicitly stated in the provided background — never invent it
+- NEVER claim years of experience unless directly stated in the background
+- If the applicant is a student or recent graduate, acknowledge that accurately in the summary (e.g. "Computer science student" not "5-year veteran")
+- NEVER fabricate companies, job titles, internships, dates, or project names
+- If no internship is mentioned, use academic projects or coursework as evidence instead
+- Write about what the background actually says, not what sounds impressive`;
+
   if (req.type === 'cv') {
     return `You are a senior professional CV writer with 15 years of experience placing candidates at top companies.
 Write three clearly labelled sections for this applicant's CV. Use the EXACT format below.
 
 ${BANNED_WORDS}
+${HONESTY}
 
 FORMAT (keep these exact labels on their own line):
 PROFESSIONAL SUMMARY:
-[3-4 sentences. State the applicant's role, years of experience, top 2-3 skills, and value proposition. Begin with the applicant's field, not their name. Vary sentence length.]
+[3-4 sentences. Accurately state the applicant's current level (student / graduate / junior / senior — use what the background supports). Mention their field and top 2-3 ACTUAL skills from the background. Vary sentence length. DO NOT claim years of experience not stated.]
 
 WORK EXPERIENCE:
-[5-7 bullet points. Each starts with •. Use strong, varied action verbs. Include numbers/metrics wherever possible (%, £/$, time saved, team size). Do NOT start every bullet with the same grammatical structure. Be specific — no generic filler.]
+[5-7 bullet points. Each starts with •. Use strong, varied action verbs. Include real numbers/metrics where mentioned in background. Do NOT start every bullet with the same grammatical structure. If the background mentions projects rather than jobs, write project-based bullets.]
 
 KEY SKILLS FOR THIS ROLE:
-[8-10 comma-separated skills directly matching this job description. Mix hard and soft skills. No generic lists.]
+[8-10 comma-separated skills that are both IN the applicant's background AND relevant to the job. Group technical tools separately from soft skills. NO generic lists — only real skills the applicant actually has.]
 
 RULES:
 - Each regeneration: rephrase everything, vary vocabulary, vary sentence rhythm
-- Replace vague phrases with hard data (e.g. not "improved efficiency" — write "cut processing time by 30%")
+- Replace vague phrases with specific evidence from the background
 - Read like a human wrote it, not a template
 
 ${ctx}`;
@@ -83,15 +92,17 @@ ${ctx}`;
     return `You are a professional career consultant writing a cover letter for ${name}.
 
 ${BANNED_WORDS}
+${HONESTY}
 
 RULES:
 - 3 paragraphs, maximum 220 words total
-- Para 1 (~60 words): Open with a specific, memorable achievement. State the exact role you're applying for. Do NOT start with "I am writing to apply for..."
-- Para 2 (~100 words): Link exactly 3 specific requirements from the job description to concrete evidence from the applicant's background. Use numbers. Be direct.
-- Para 3 (~50 words): Express genuine, specific interest in this company (mention something real about them if possible). Close with a direct call to action.
+- Para 1 (~60 words): Open with a specific, real achievement from the background. State the exact role being applied for. Do NOT start with "I am writing to apply for..."
+- Para 2 (~100 words): Link exactly 3 specific requirements from the job description to REAL evidence from the applicant's background. Use numbers if the background provides them. If no internship is mentioned, use academic work, projects, or coursework instead.
+- Para 3 (~50 words): Express genuine interest in this company. Close with a direct call to action.
 - Tone: confident, warm, direct — sounds like a real person, not a corporate template
 - Start with: "Dear Hiring Manager,"
-- End with: "Sincerely,\n${name}"
+- DO NOT include a closing or sign-off — write the body only, ending after the final paragraph
+- Do NOT write "Sincerely," or the applicant's name at the end — the template adds that
 - Each regeneration: completely rephrase, use different examples, vary sentence structure
 
 ${ctx}`;
@@ -100,10 +111,13 @@ ${ctx}`;
   // skills
   return `Talent analyst. Return ONLY valid JSON (no markdown, no code fences):
 {"matchScore":<0-100>,"topSkills":[{"skill":"...","relevance":"high|medium|low","inResume":true,"tip":"one specific, actionable tip — avoid vague advice"}],"gaps":["specific gap 1","specific gap 2"],"strengths":["concrete strength 1","concrete strength 2"],"summary":"2 direct sentences — state the match quality and the single most important recommendation"}
-Include 6-8 topSkills. Be precise and specific, not generic.
+Include 6-8 topSkills. Be precise and specific, not generic. Base inResume only on skills actually mentioned in the background.
 
 ${ctx}`;
 }
+
+
+
 
 export async function callOpenRouter(req: OpenRouterRequest): Promise<OpenRouterResponse> {
   const apiKey = process.env.OPENROUTER_API_KEY;
