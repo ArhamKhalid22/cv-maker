@@ -134,8 +134,7 @@ export default function CoverLetterOutput() {
   </div>
 
   <div class="sign-off-block">
-    <div>${cData.sign_off || 'Sincerely,'}</div>
-    <div class="signature">${name}</div>
+    <div style="white-space: pre-wrap;">${cData.sign_off || 'Sincerely,'}</div>
   </div>
 
 </body>
@@ -270,10 +269,7 @@ export default function CoverLetterOutput() {
           {cData?.closing_paragraph && <p style={{ marginBottom: 24, textAlign: 'justify' }}>{cData.closing_paragraph}</p>}
 
           <div style={{ marginTop: 32 }}>
-            <div>{cData?.sign_off || 'Sincerely,'}</div>
-            <div style={{ fontSize: 20, marginTop: 12, fontFamily: 'cursive', color: '#111' }}>
-              {pInfo?.full_name || store.fullName || 'Applicant Name'}
-            </div>
+            <div style={{ whiteSpace: 'pre-wrap' }}>{cData?.sign_off || 'Sincerely,'}</div>
           </div>
         </div>
       </div>
