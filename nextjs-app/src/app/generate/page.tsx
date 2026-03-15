@@ -108,6 +108,44 @@ export default function GeneratePage() {
   const [step, setStep] = useState(0);
   const outputRef = useRef<HTMLDivElement>(null);
 
+  const [isParsing, setIsParsing] = useState(false);
+
+  const handleParseResume = async (text: string) => {
+    if (!text.trim() || text.length < 50) {
+      toast.error('Resume text too short to parse.');
+      return;
+    }
+    setIsParsing(true);
+    try {
+      const res = await fetch('/api/parse-resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Parsing failed');
+
+      // Update store fields
+      if (data.fullName) store.setFullName(data.fullName);
+      if (data.email) store.setEmail(data.email);
+      if (data.phone) store.setPhone(data.phone);
+      if (data.city) store.setCity(data.city);
+      if (data.linkedin) store.setLinkedin(data.linkedin);
+      if (data.education) store.setEducation(data.education);
+      if (data.hardSkills) store.setHardSkills(data.hardSkills);
+      if (data.softSkills) store.setSoftSkills(data.softSkills);
+      if (data.achievements) store.setAchievements(data.achievements);
+      if (data.userBackground) store.setUserBackground(data.userBackground);
+
+      toast.success('✨ Profile auto-filled from resume!');
+    } catch (e) {
+      toast.error('Failed to parse resume. Please fill manually.');
+      console.error(e);
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
   const isAnyLoading = cvStatus === 'loading' || coverStatus === 'loading' || skillsStatus === 'loading';
   const hasOutput    = store.generatedCV || store.coverLetter || store.skillsAnalysis;
 
@@ -160,6 +198,42 @@ export default function GeneratePage() {
         return (
           <div>
             <StepTitle icon="👤" title="Tell us about yourself" sub="This information appears in the header of your CV and the cover letter sign-off." />
+            
+            {/* Quick Fill Option */}
+            <div style={{ padding: '16px 20px', background: 'rgba(99,102,241,0.06)', border: '1px dashed rgba(99,102,241,0.3)', borderRadius: 12, marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <span style={{ fontSize: 18 }}>⚡</span>
+                <span style={{ fontWeight: 700, fontSize: 13.5 }}>Smart Auto-fill (beta)</span>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                Paste your current resume or a link to save time. AI will extract your details into the next 5 steps.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <textarea 
+                  className="input" 
+                  placeholder="Paste resume text or LinkedIn summary here..." 
+                  style={{ height: 42, minHeight: 42, fontSize: 12, flex: 1 }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleParseResume((e.target as HTMLTextAreaElement).value);
+                    }
+                  }}
+                />
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  style={{ height: 42 }}
+                  disabled={isParsing}
+                  onClick={(e) => {
+                    const ta = (e.currentTarget.previousElementSibling as HTMLTextAreaElement);
+                    handleParseResume(ta.value);
+                  }}
+                >
+                  {isParsing ? '⌛' : 'Fill'}
+                </button>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <Label text="Full Name" required />
