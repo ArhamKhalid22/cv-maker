@@ -84,9 +84,9 @@ export default function CVOutput() {
       font-family: 'Jost', sans-serif;
       font-size: 10.5pt; color: #2d3748; line-height: 1.5; background: #fff;
     }
-    @page { size: A4; margin: 1.5cm; }
+    @page { size: A4; margin: 0; }
     @media screen { body { max-width: 21cm; margin: 2rem auto; padding: 1.5cm; box-shadow: 0 0 20px rgba(0,0,0,0.1); } }
-    @media print { body { padding: 0; } }
+    @media print { body { padding: 1.5cm; } }
 
     /* Header */
     .header {

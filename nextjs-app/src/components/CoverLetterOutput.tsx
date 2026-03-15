@@ -81,9 +81,9 @@ export default function CoverLetterOutput() {
       font-family: 'Jost', Arial, sans-serif;
       font-size: 11pt; line-height: 1.6; color: #1a202c; background: #fff;
     }
-    @page { size: A4; margin: 2.5cm; }
+    @page { size: A4; margin: 0; }
     @media screen { body { max-width: 21cm; margin: 2rem auto; padding: 2.5cm; box-shadow: 0 0 20px rgba(0,0,0,0.1); } }
-    @media print { body { padding: 0; } }
+    @media print { body { padding: 2.5cm; } }
 
     .header {
       margin-bottom: 3rem; border-bottom: 2px solid #2d3748; padding-bottom: 1.5rem;
