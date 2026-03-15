@@ -31,7 +31,11 @@ export default function GeneratePage() {
   const isAnyLoading = cvStatus === 'loading' || coverStatus === 'loading' || skillsStatus === 'loading';
   const hasOutput    = store.generatedCV || store.coverLetter || store.skillsAnalysis;
 
-  const profileComplete = !!(store.fullName?.trim() && store.userBackground?.trim());
+  const hasAnyExperienceData = [store.userBackground, store.education, store.hardSkills, store.softSkills, store.achievements]
+    .filter(Boolean)
+    .join('').trim().length > 5;
+    
+  const profileComplete = !!(store.fullName?.trim() && hasAnyExperienceData);
 
   if (!mounted) return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
@@ -49,7 +53,7 @@ export default function GeneratePage() {
 
   const handleGenerate = async () => {
     if (!validate('Please enter a job description first.', !!store.jobDescription.trim())) return;
-    if (!validate('Please complete your profile (Name & Experience) first.', profileComplete)) {
+    if (!validate('Please add your Name and at least some Experience, Education, or Skills to your profile first.', profileComplete)) {
       router.push('/profile');
       return;
     }

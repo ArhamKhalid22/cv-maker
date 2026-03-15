@@ -3,9 +3,6 @@
   "version": "2.0.0",
   "description": "AI-powered job application platform with CV generation, cover letters, and skills matching",
   "private": true,
-  "engines": {
-    "node": "24.x"
-  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

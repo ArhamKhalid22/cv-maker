@@ -1,6 +1,19 @@
 {
   "version": 2,
-  "buildCommand": "cd nextjs-app && npm install && npm run build",
-  "outputDirectory": "nextjs-app/.next",
-  "framework": "nextjs"
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
+  ]
 }
