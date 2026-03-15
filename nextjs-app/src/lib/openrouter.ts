@@ -22,8 +22,8 @@ export interface OpenRouterResponse {
 const MODEL = 'openai/gpt-4o-mini';
 
 const MAX_TOKENS: Record<GenerationType, number> = {
-  cv:     1000,
-  cover:  700,
+  cv:     2500,
+  cover:  1500,
   skills: 600,
 };
 
@@ -51,60 +51,112 @@ function buildContext(req: OpenRouterRequest): string {
   return ctx;
 }
 
+const JSON_SCHEMA = `
+{
+  "applicant_profile": {
+    "personal_information": {
+      "full_name": "",
+      "professional_title": "",
+      "email": "",
+      "phone": "",
+      "location": "",
+      "linkedin_or_portfolio": ""
+    },
+    "resume_data": {
+      "summary": "",
+      "core_skills": [],
+      "professional_experience": [
+        {
+          "company_name": "",
+          "job_title": "",
+          "location": "",
+          "start_date": "",
+          "end_date": "",
+          "accomplishment_bullets": []
+        }
+      ],
+      "education": [
+        {
+          "degree_name": "",
+          "institution_name": "",
+          "location": "",
+          "start_year": "",
+          "end_year": ""
+        }
+      ],
+      "certifications_and_courses": [],
+      "awards": [],
+      "projects": [
+        {
+          "project_name": "",
+          "description": ""
+        }
+      ]
+    },
+    "cover_letter_data": {
+      "date": "",
+      "recipient_name": "",
+      "recipient_company": "",
+      "recipient_address": "",
+      "greeting": "",
+      "opening_paragraph": "",
+      "body_paragraphs": [],
+      "bulleted_achievements": [],
+      "closing_paragraph": "",
+      "sign_off": ""
+    }
+  }
+}`;
+
 function buildPrompt(req: OpenRouterRequest): string {
   const ctx  = buildContext(req);
   const name = req.fullName?.trim() || 'Applicant';
 
   const HONESTY = `CRITICAL HONESTY RULES:
-- Use ONLY information explicitly stated in the provided background — never invent it
-- NEVER claim years of experience unless directly stated in the background
-- If the applicant is a student or recent graduate, acknowledge that accurately in the summary (e.g. "Computer science student" not "5-year veteran")
-- NEVER fabricate companies, job titles, internships, dates, or project names
-- If no internship is mentioned, use academic projects or coursework as evidence instead
-- Write about what the background actually says, not what sounds impressive`;
+1. No Hallucinations: If the user does not provide data for a specific field, you MUST leave that field absolutely blank (use "" or [] in JSON).
+2. Do not use placeholder text like "[Insert Company Here]" or "City, State". Just leave it empty.
+3. Use ONLY information explicitly stated in the provided background — never invent it.
+4. If no internship is mentioned, use academic projects or coursework as evidence instead.`;
 
   if (req.type === 'cv') {
-    return `You are a senior professional CV writer with 15 years of experience placing candidates at top companies.
-Write three clearly labelled sections for this applicant's CV. Use the EXACT format below.
+    return `You are an expert resume formatter. Your job is to take raw user data and map it to the provided JSON schema.
+Return ONLY valid JSON (no markdown, no code fences, no explanations).
 
 ${BANNED_WORDS}
 ${HONESTY}
 
-FORMAT (keep these exact labels on their own line):
-PROFESSIONAL SUMMARY:
-[3-4 sentences. Accurately state the applicant's current level (student / graduate / junior / senior — use what the background supports). Mention their field and top 2-3 ACTUAL skills from the background. Vary sentence length. DO NOT claim years of experience not stated.]
+SCHEMA TO FOLLOW:
+${JSON_SCHEMA}
 
-WORK EXPERIENCE:
-[5-7 bullet points. Each starts with •. Use strong, varied action verbs. Include real numbers/metrics where mentioned in background. Do NOT start every bullet with the same grammatical structure. If the background mentions projects rather than jobs, write project-based bullets.]
+INSTRUCTIONS FOR CV:
+- Populate "personal_information" and "resume_data" accurately.
+- Leave "cover_letter_data" completely empty (with "" or []).
+- Ensure "accomplishment_bullets" are strong, varied, and start with bullet points.
+- "core_skills" should be a list of 8-10 highly relevant skills from the background.
+- "summary" should be a 3-4 sentence professional summary.
 
-KEY SKILLS FOR THIS ROLE:
-[8-10 comma-separated skills that are both IN the applicant's background AND relevant to the job. Group technical tools separately from soft skills. NO generic lists — only real skills the applicant actually has.]
-
-RULES:
-- Each regeneration: rephrase everything, vary vocabulary, vary sentence rhythm
-- Replace vague phrases with specific evidence from the background
-- Read like a human wrote it, not a template
-
+RAW USER DATA TO PROCESS:
 ${ctx}`;
   }
 
   if (req.type === 'cover') {
-    return `You are a professional career consultant writing a cover letter for ${name}.
+    return `You are an expert cover letter formatting assistant. Your job is to take raw user data and map it to the provided JSON schema.
+Return ONLY valid JSON (no markdown, no code fences, no explanations).
 
 ${BANNED_WORDS}
 ${HONESTY}
 
-RULES:
-- 3 paragraphs, maximum 220 words total
-- Para 1 (~60 words): Open with a specific, real achievement from the background. State the exact role being applied for. Do NOT start with "I am writing to apply for..."
-- Para 2 (~100 words): Link exactly 3 specific requirements from the job description to REAL evidence from the applicant's background. Use numbers if the background provides them. If no internship is mentioned, use academic work, projects, or coursework instead.
-- Para 3 (~50 words): Express genuine interest in this company. Close with a direct call to action.
-- Tone: confident, warm, direct — sounds like a real person, not a corporate template
-- Start with: "Dear Hiring Manager,"
-- DO NOT include a closing or sign-off — write the body only, ending after the final paragraph
-- Do NOT write "Sincerely," or the applicant's name at the end — the template adds that
-- Each regeneration: completely rephrase, use different examples, vary sentence structure
+SCHEMA TO FOLLOW:
+${JSON_SCHEMA}
 
+INSTRUCTIONS FOR COVER LETTER:
+- Populate "cover_letter_data" accurately specifically tailored to the Job Description.
+- Leave "resume_data" completely empty (with "" or []).
+- "body_paragraphs" should contain the main paragraphs linking requirements to evidence.
+- "bulleted_achievements" can contain 2-3 specific bulleted highlights if explicitly mentioned in the background. If none are impressive enough, leave [] and construct a standard body paragraph instead.
+- "greeting", "opening_paragraph", "closing_paragraph", and "sign_off" must sound natural and directly address the hiring manager.
+
+RAW USER DATA TO PROCESS:
 ${ctx}`;
   }
 
@@ -116,15 +168,16 @@ Include 6-8 topSkills. Be precise and specific, not generic. Base inResume only 
 ${ctx}`;
 }
 
-
-
-
 export async function callOpenRouter(req: OpenRouterRequest): Promise<OpenRouterResponse> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY is not configured');
 
   const prompt    = buildPrompt(req);
   const maxTokens = MAX_TOKENS[req.type];
+
+  let systemPrompt = `You are a professional career data processor. Always produce fresh output with every request.
+Vary vocabulary, sentence length, and structure with every regeneration.
+Never repeat phrasing. Return ONLY strictly valid raw JSON without formatting ticks.`;
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -137,12 +190,7 @@ export async function callOpenRouter(req: OpenRouterRequest): Promise<OpenRouter
     body: JSON.stringify({
       model: MODEL,
       messages: [
-        {
-          role: 'system',
-          content: `You are a professional career consultant. Always produce fresh output with every request.
-Vary vocabulary, sentence length, and structure with every regeneration.
-Never repeat phrasing from previous outputs. Sound human — direct, specific, confident.`,
-        },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt },
       ],
       temperature: 0.9,

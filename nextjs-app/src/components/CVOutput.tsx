@@ -4,58 +4,12 @@ import { useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { useJobAI } from '@/hooks/useJobAI';
 import toast from 'react-hot-toast';
+import { safelyParseJSON } from '@/lib/json';
 
 function nameToFilePart(name: string) {
   return name.trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '') || 'Applicant';
 }
 
-/**
- * Parse AI CV text into three labelled sections.
- */
-function parseCVSections(raw: string) {
-  const summaryMatch = raw.match(/PROFESSIONAL SUMMARY:\s*([\s\S]*?)(?=WORK EXPERIENCE:|KEY SKILLS|$)/i);
-  const expMatch     = raw.match(/WORK EXPERIENCE:\s*([\s\S]*?)(?=KEY SKILLS|PROFESSIONAL SUMMARY|$)/i);
-  const skillsMatch  = raw.match(/KEY SKILLS(?:[^:]*)?:\s*([\s\S]*?)$/i);
-  return {
-    summary:    summaryMatch?.[1]?.trim() || '',
-    experience: expMatch?.[1]?.trim()     || raw,
-    skills:     skillsMatch?.[1]?.trim()  || '',
-  };
-}
-
-/**
- * Parse the user's raw background text into structured entries.
- * Detects company/role header lines vs bullet lines.
- */
-function parseExperienceEntries(bg: string) {
-  const lines   = bg.split('\n').map(l => l.trim()).filter(Boolean);
-  const entries: { header: string; bullets: string[] }[] = [];
-  let current:   { header: string; bullets: string[] } | null = null;
-
-  for (const line of lines) {
-    const isBullet = /^[•\-–*]/.test(line);
-    if (isBullet) {
-      if (current) current.bullets.push(line.replace(/^[•\-–*]\s*/, ''));
-    } else {
-      if (current) entries.push(current);
-      current = { header: line, bullets: [] };
-    }
-  }
-  if (current) entries.push(current);
-  return entries;
-}
-
-/** Turns a bullet string into a <li> list */
-function bulletsToHTML(text: string) {
-  return text
-    .split('\n')
-    .map(l => l.trim().replace(/^[•\-–*]\s*/, ''))
-    .filter(Boolean)
-    .map(l => `<li>${l}</li>`)
-    .join('\n');
-}
-
-/** Helper to open a Blob URL — avoids encoding bugs from document.write */
 function openBlobHTML(html: string, title: string) {
   const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
   const url  = URL.createObjectURL(blob);
@@ -64,7 +18,6 @@ function openBlobHTML(html: string, title: string) {
     toast.error('Allow popups to open the PDF preview.');
     return;
   }
-  // give fonts time to load before the print dialog appears
   win.addEventListener('load', () => {
     setTimeout(() => {
       win.document.title = title;
@@ -81,187 +34,178 @@ export default function CVOutput() {
   const { generate, regenerate, cvStatus, cvError } = useJobAI();
   const [copied, setCopied] = useState(false);
 
+  // Safely parse JSON
+  let cvData = null;
+  if (store.generatedCV) {
+    const raw = safelyParseJSON<any>(store.generatedCV);
+    if (raw && raw.applicant_profile) {
+      cvData = raw.applicant_profile;
+    }
+  }
+
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(store.generatedCV);
+    await navigator.clipboard.writeText(JSON.stringify(cvData, null, 2) || store.generatedCV);
     setCopied(true);
-    toast.success('Copied!');
+    toast.success('Copied JSON data!');
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadPDF = () => {
-    const name     = store.fullName?.trim()     || 'Your Name';
-    const jobApply = store.jobTitle?.trim()     || '';
-    const company  = store.company?.trim()      || '';
-    const edu      = store.education?.trim()    || '';
-    const ach      = store.achievements?.trim() || '';
-    const email    = store.email?.trim()        || '';
-    const phone    = store.phone?.trim()        || '';
-    const city     = store.city?.trim()         || '';
-    const linkedin = store.linkedin?.trim()     || '';
-    const bg       = store.userBackground?.trim()  || '';
-    const combined = [store.hardSkills, store.softSkills].filter(Boolean).join(', ');
-
-    const { summary, experience, skills } = parseCVSections(store.generatedCV);
-
-    // Parse user's real work history for section headers
-    const bgEntries = parseExperienceEntries(bg);
-
-    // Education: split multi-line
-    const eduLines = edu.split('\n').map(l => l.trim()).filter(Boolean);
-
-    // Achievements: bullet list
-    const achBullets = ach
-      ? ach.split('\n').map(l => l.trim()).filter(Boolean)
-          .map(l => l.replace(/^[•\-–*]\s*/, ''))
-          .map(l => `<li>${l}</li>`).join('\n')
-      : '';
-
-    const skillsList = skills || combined || '';
-    const baseName   = company ? nameToFilePart(company) : nameToFilePart(name);
-    const filename   = `${baseName}_CV`;
-
-    // Contact line: only show fields that are actually filled
-    const contactParts: string[] = [];
-    if (email)    contactParts.push(email);
-    if (phone)    contactParts.push(phone);
-    if (city)     contactParts.push(city);
-    if (linkedin) contactParts.push(
-      `<a href="https://${linkedin.replace(/^https?:\/\//, '')}" style="color:#333;text-decoration:underline;">LinkedIn</a>`
-    );
-
-    // Work experience HTML: use real bg entries for headers, AI bullets as content
-    // If bg is structured, use it. Otherwise render AI bullets directly.
-    const aiBulletHTML = bulletsToHTML(experience);
-    let workHTML = '';
-    if (bgEntries.length > 0) {
-      // Render each real entry header with its own bullets  (or AI bullets on first entry)
-      workHTML = bgEntries.map((entry, i) => {
-        const bullets = entry.bullets.length > 0
-          ? entry.bullets.map(b => `<li>${b}</li>`).join('\n')
-          : (i === 0 ? aiBulletHTML : ''); // AI bullets under first entry only
-        return `
-    <div class="entry">
-      <div class="entry-header">${entry.header}</div>
-      ${bullets ? `<ul>${bullets}</ul>` : ''}
-    </div>`;
-      }).join('\n');
-    } else {
-      // Unstructured bg — just show AI-enhanced bullets
-      workHTML = `<div class="entry"><ul>${aiBulletHTML}</ul></div>`;
+    if (!cvData) {
+      toast.error("Failed to read CV structured data.");
+      return;
     }
+
+    const { personal_information: pInfo, resume_data: rData } = cvData;
+    
+    // Ensure we have some safe fallbacks from store
+    const name     = pInfo.full_name?.trim() || store.fullName?.trim() || 'Applicant Name';
+    const title    = pInfo.professional_title?.trim() || store.jobTitle?.trim() || 'Professional';
+    const email    = pInfo.email?.trim() || store.email?.trim();
+    const phone    = pInfo.phone?.trim() || store.phone?.trim();
+    const location = pInfo.location?.trim() || store.city?.trim();
+    const linkedin = pInfo.linkedin_or_portfolio?.trim() || store.linkedin?.trim();
+
+    const contactParts = [email, phone, location].filter(Boolean);
+
+    const baseName = store.company ? nameToFilePart(store.company) : nameToFilePart(name);
+    const filename = `${baseName}_CV`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="author" content="${name}"/>
-  <title>${name} — CV</title>
+  <title>${name} - CV</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
-      font-family: 'Roboto', Calibri, Arial, sans-serif;
-      font-size: 10.5pt;
-      font-weight: 400;
-      line-height: 1.5;
-      color: #111;
-      background: #fff;
+      font-family: 'Jost', sans-serif;
+      font-size: 10.5pt; color: #2d3748; line-height: 1.5; background: #fff;
     }
+    @page { size: A4; margin: 1.5cm; }
+    @media screen { body { max-width: 21cm; margin: 2rem auto; padding: 1.5cm; box-shadow: 0 0 20px rgba(0,0,0,0.1); } }
+    @media print { body { padding: 0; } }
 
-    /* ── PAGE ── */
-    @page { size: A4; margin: 2cm; }
-    @media screen { body { max-width: 21cm; margin: 0 auto; padding: 2cm; } }
-    @media print  { body { padding: 0; } }
-
-    /* ── HEADER ── */
-    .cv-name {
-      font-size: 20pt; font-weight: 700; letter-spacing: -0.3px;
-      color: #000; margin-bottom: 4px;
+    /* Header */
+    .header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 1.5rem; border-bottom: 2px solid #1a202c; margin-bottom: 2rem;
     }
-    .cv-contact {
-      font-size: 9.5pt; color: #444; line-height: 1.7;
-      margin-bottom: 12px;
-    }
-    .cv-divider { border: none; border-top: 2px solid #111; margin: 10px 0 18px; }
+    .header-left { flex: 1; text-transform: uppercase; }
+    .name { font-size: 32pt; font-weight: 300; letter-spacing: 2px; color: #1a202c; line-height: 1.1; margin-bottom: 0.25rem; }
+    .title { font-size: 11pt; font-weight: 600; letter-spacing: 4px; color: #4a5568; }
+    .header-right { flex: 0 0 240px; text-align: right; }
+    .contact-item { font-size: 9.5pt; color: #1a202c; margin-bottom: 4px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 
-    /* ── SECTION ── */
-    .section { margin-bottom: 18px; }
+    /* Grid Layout */
+    .main-grid {
+      display: grid; grid-template-columns: 200px 1fr; gap: 2.5rem;
+    }
+    .left-col { border-right: 1px solid #e2e8f0; padding-right: 2.5rem; }
+    .right-col { }
+
+    /* Sections */
     .section-title {
-      font-size: 9.5pt; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 1.4px; color: #000;
-      border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-bottom: 10px;
+      font-size: 11pt; font-weight: 600; letter-spacing: 3px; text-transform: uppercase;
+      color: #1a202c; margin-bottom: 1.25rem;
     }
 
-    /* ── SUMMARY ── */
-    .summary-text { font-size: 10pt; line-height: 1.65; color: #222; }
+    /* Blocks */
+    p.summary { font-size: 10.5pt; text-align: justify; margin-bottom: 2rem; line-height: 1.6; }
+    
+    .exp-item, .edu-item, .proj-item { margin-bottom: 1.5rem; }
+    .exp-header { margin-bottom: 0.5rem; }
+    .exp-title { font-size: 10.5pt; font-weight: 700; text-transform: uppercase; color: #1a202c; }
+    .exp-company { font-size: 10pt; font-weight: 600; color: #4a5568; margin-top:2px; }
+    .exp-date { font-size: 9.5pt; font-style: italic; color: #718096; }
+    ul { list-style-type: none; padding-left: 0; }
+    ul li { position: relative; padding-left: 14px; margin-bottom: 6px; font-size: 10pt; line-height: 1.5; color: #2d3748;}
+    ul li::before { content: "•"; position: absolute; left: 0; color: #a0aec0; }
 
-    /* ── ENTRY ── */
-    .entry { margin-bottom: 12px; }
-    .entry-header {
-      font-size: 10pt; font-weight: 700; color: #111;
-      margin-bottom: 5px;
-    }
-    .entry ul { padding-left: 17px; list-style-type: disc; }
-    .entry ul li { margin-bottom: 3px; font-size: 10pt; line-height: 1.5; }
-
-    /* ── EDU ── */
-    .edu-block { margin-bottom: 10px; }
-    .edu-inst  { font-weight: 700; font-size: 10.5pt; }
-    .edu-detail { font-size: 10pt; color: #333; margin-top: 2px; }
-
-    /* ── SKILLS ── */
-    .skills-text { font-size: 10pt; line-height: 1.75; color: #222; }
+    .skills-list li { padding-left: 0; margin-bottom: 8px; font-weight: 500; }
+    .skills-list li::before { display: none; }
   </style>
 </head>
 <body>
-
-  <!-- HEADER -->
-  <div class="cv-name">${name}</div>
-  <div class="cv-contact">
-    ${contactParts.join(' &nbsp;·&nbsp; ') || ''}
-  </div>
-  <hr class="cv-divider"/>
-
-  <!-- PROFESSIONAL SUMMARY -->
-  ${summary ? `
-  <div class="section">
-    <div class="section-title">Professional Summary</div>
-    <p class="summary-text">${summary.replace(/\n/g, ' ')}</p>
-  </div>` : ''}
-
-  <!-- WORK EXPERIENCE -->
-  ${bg ? `
-  <div class="section">
-    <div class="section-title">Work Experience</div>
-    ${workHTML}
-  </div>` : ''}
-
-  <!-- EDUCATION -->
-  ${eduLines.length > 0 ? `
-  <div class="section">
-    <div class="section-title">Education</div>
-    <div class="edu-block">
-      <div class="edu-inst">${eduLines[0]}</div>
-      ${eduLines.slice(1).map(l => `<div class="edu-detail">${l}</div>`).join('')}
+  <div class="header">
+    <div class="header-left">
+      <div class="name">${name}</div>
+      <div class="title">${title}</div>
     </div>
-  </div>` : ''}
+    <div class="header-right">
+      ${contactParts.map(str => `<div class="contact-item">${str}</div>`).join('')}
+      ${linkedin ? `<div class="contact-item"><a href="${linkedin.startsWith('http') ? linkedin : `https://${linkedin}`}" style="color:inherit;text-decoration:none;">LinkedIn</a></div>` : ''}
+    </div>
+  </div>
 
-  <!-- KEY SKILLS -->
-  ${skillsList ? `
-  <div class="section">
-    <div class="section-title">Key Skills</div>
-    <p class="skills-text">${skillsList.replace(/,\s*/g, '&nbsp;&nbsp;·&nbsp;&nbsp;')}</p>
-  </div>` : ''}
+  <div class="main-grid">
+    <div class="left-col">
+      ${rData.education && rData.education.length > 0 ? `
+        <div class="section-title">Education</div>
+        ${rData.education.map((ed: any) => `
+          <div class="edu-item">
+            <div class="exp-title">${ed.degree_name || ''}</div>
+            <div class="exp-company">${ed.institution_name || ''}</div>
+            <div class="exp-date">${[ed.location, `${ed.start_year || ''} ${ed.start_year && ed.end_year ? '-' : ''} ${ed.end_year || ''}`.trim()].filter(Boolean).join(' | ')}</div>
+          </div>
+        `).join('')}
+        <br/>
+      ` : ''}
 
-  <!-- KEY ACHIEVEMENTS -->
-  ${achBullets ? `
-  <div class="section">
-    <div class="section-title">Key Achievements</div>
-    <div class="entry"><ul>${achBullets}</ul></div>
-  </div>` : ''}
+      ${rData.core_skills && rData.core_skills.length > 0 ? `
+        <div class="section-title">Core Skills</div>
+        <ul class="skills-list">
+          ${rData.core_skills.map((sk: string) => `<li>${sk}</li>`).join('')}
+        </ul>
+        <br/>
+      ` : ''}
+      
+      ${rData.certifications_and_courses && rData.certifications_and_courses.length > 0 ? `
+        <div class="section-title">Certifications</div>
+        <ul class="skills-list" style="font-weight:400;font-size:9pt;">
+          ${rData.certifications_and_courses.map((c: string) => `<li>${c}</li>`).join('')}
+        </ul>
+      ` : ''}
+    </div>
 
+    <div class="right-col">
+      ${rData.summary ? `
+        <div class="section-title">Summary</div>
+        <p class="summary">${rData.summary}</p>
+      ` : ''}
+
+      ${rData.professional_experience && rData.professional_experience.length > 0 ? `
+        <div class="section-title">Professional Experience</div>
+        ${rData.professional_experience.map((exp: any) => `
+          <div class="exp-item">
+            <div class="exp-header">
+              <div class="exp-title">${exp.job_title || ''}</div>
+              <div class="exp-company">${exp.company_name || ''} — ${[exp.location, `${exp.start_date || ''} ${exp.start_date && exp.end_date ? '-' : ''} ${exp.end_date || ''}`.trim()].filter(Boolean).join(', ')}</div>
+            </div>
+            ${exp.accomplishment_bullets && exp.accomplishment_bullets.length > 0 ? `
+              <ul>
+                ${exp.accomplishment_bullets.map((b: string) => `<li>${b}</li>`).join('')}
+              </ul>
+            ` : ''}
+          </div>
+        `).join('')}
+      ` : ''}
+
+      ${rData.projects && rData.projects.length > 0 ? `
+        <div class="section-title">Projects</div>
+        ${rData.projects.map((proj: any) => `
+          <div class="proj-item">
+            <div class="exp-header">
+              <div class="exp-title">${proj.project_name || ''}</div>
+            </div>
+            <p style="font-size: 10pt; line-height: 1.5; text-align: justify">${proj.description || ''}</p>
+          </div>
+        `).join('')}
+      ` : ''}
+    </div>
+  </div>
 </body>
 </html>`;
 
@@ -278,7 +222,7 @@ export default function CVOutput() {
           ))}
         </div>
         <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, marginTop: 20 }}>
-          ✨ Writing your professional CV…
+          ✨ Generating your structured JSON CV…
         </p>
       </div>
     );
@@ -295,21 +239,33 @@ export default function CVOutput() {
     );
   }
 
-  /* ── Empty ── */
+  /* ── Empty or Invalid Data ── */
   if (!store.generatedCV) {
     return (
       <div className="glass-card" style={{ padding: 48, textAlign: 'center' }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>📄</div>
         <h3 style={{ marginBottom: 8, fontWeight: 600 }}>No CV Content Yet</h3>
         <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 14 }}>
-          Generate a tailored CV with professional summary, experience bullets, and skills
+          Generate a tailored, JSON-structured CV matching modern, beautiful layouts.
         </p>
-        <button className="btn btn-primary" onClick={() => generate('cv')}>✨ Generate CV</button>
+        <button className="btn btn-primary" onClick={() => generate('cv')}>✨ Generate Structured CV</button>
       </div>
     );
   }
 
-  const { summary, experience, skills } = parseCVSections(store.generatedCV);
+  if (!cvData) {
+    return (
+      <div className="glass-card" style={{ padding: 32, textAlign: 'center' }}>
+        <p style={{ color: 'var(--error)' }}>Could not parse the generated JSON perfectly. The AI might have returned invalid text.</p>
+        <pre style={{textAlign: 'left', background: '#f0f0f0', padding: 12, marginTop: 10, borderRadius: 6, fontSize: 12, overflowX:'auto'}}>
+          {store.generatedCV}
+        </pre>
+        <button className="btn btn-secondary" style={{marginTop: 16}} onClick={() => regenerate('cv')}>Regenerate</button>
+      </div>
+    );
+  }
+
+  const { personal_information: pInfo, resume_data: rData } = cvData;
 
   /* ── Output ── */
   return (
@@ -323,15 +279,15 @@ export default function CVOutput() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span>📄</span>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>Professional CV</span>
-          <span className="badge badge-success">AI Generated</span>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Structured JSON CV</span>
+          <span className="badge badge-success">Olivia Mills Template</span>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className={`btn btn-secondary btn-sm copy-btn ${copied ? 'copied' : ''}`} onClick={handleCopy}>
-            {copied ? '✓ Copied' : '📋 Copy'}
+            {copied ? '✓ Copied JSON' : '📋 Copy JSON data'}
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleDownloadPDF}>
-            📥 Download CV PDF
+            📥 Download Print PDF
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => regenerate('cv')}>
             🔄 New Version
@@ -339,49 +295,75 @@ export default function CVOutput() {
         </div>
       </div>
 
-      {/* Sectioned preview */}
-      <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {summary && (
+      {/* Structured preview inside the app itself */}
+      <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 20, background: '#fafafa', color: '#111', fontFamily: 'sans-serif' }}>
+        <div style={{ paddingBottom: '1rem', borderBottom: '2px solid #222', display: 'flex', justifyContent:'space-between', alignItems:'flex-end'}}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Professional Summary
-            </div>
-            <p style={{ fontSize: 14, lineHeight: 1.75, color: 'var(--text-primary)' }}>{summary}</p>
+            <h1 style={{fontSize: 28, textTransform:'uppercase', fontWeight: 300, letterSpacing: 2, marginBottom:4}}>{pInfo?.full_name || store.fullName || 'Applicant'}</h1>
+            <h3 style={{fontSize: 12, textTransform: 'uppercase', letterSpacing: 2, color: '#555'}}>{pInfo?.professional_title || store.jobTitle}</h3>
           </div>
-        )}
-
-        {experience && (
+          <div style={{textAlign: 'right', fontSize: 11, color: '#333'}}>
+            <div>{pInfo?.email || store.email}</div>
+            <div>{pInfo?.phone || store.phone}</div>
+            <div>{pInfo?.location || store.city}</div>
+          </div>
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1fr) 2fr', gap: '2rem' }}>
+          <div style={{ borderRight: '1px solid #ddd', paddingRight: '2rem' }}>
+            {rData?.education && rData.education.length > 0 && (
+              <div style={{marginBottom: 24}}>
+                <h4 style={{fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12}}>Education</h4>
+                {rData.education.map((e: any, i: number) => (
+                  <div key={i} style={{marginBottom: 12}}>
+                    <div style={{fontSize: 12, fontWeight: 700}}>{e.degree_name}</div>
+                    <div style={{fontSize: 11}}>{e.institution_name}</div>
+                    <div style={{fontSize: 11, color: '#666'}}>{e.start_year} - {e.end_year}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {rData?.core_skills && rData.core_skills.length > 0 && (
+              <div style={{marginBottom: 24}}>
+                <h4 style={{fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12}}>Core Skills</h4>
+                <div style={{fontSize:12, lineHeight: 1.8}}>
+                  {rData.core_skills.map((s: string, idx: number) => (
+                    <div key={idx}>{s}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Work Experience
-            </div>
-            <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'var(--font-sans)', fontSize: 13.5, lineHeight: 1.8, color: 'var(--text-primary)' }}>
-              {experience}
-            </pre>
+            {rData?.summary && (
+              <div style={{marginBottom: 24}}>
+                <h4 style={{fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12}}>Summary</h4>
+                <p style={{fontSize: 13, lineHeight: 1.6}}>{rData.summary}</p>
+              </div>
+            )}
+            
+            {rData?.professional_experience && rData.professional_experience.length > 0 && (
+              <div style={{marginBottom: 24}}>
+                <h4 style={{fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 16}}>Professional Experience</h4>
+                {rData.professional_experience.map((exp: any, i: number) => (
+                  <div key={i} style={{marginBottom: 20}}>
+                     <div style={{fontSize: 13, fontWeight: 700}}>{exp.job_title}</div>
+                     <div style={{fontSize: 12, fontWeight: 600, color: '#444'}}>{exp.company_name} — {exp.location}</div>
+                     <div style={{fontSize: 11, color: '#777', fontStyle: 'italic', marginBottom: 8}}>{exp.start_date} - {exp.end_date}</div>
+                     <ul style={{fontSize: 13, paddingLeft: 18, margin: 0}}>
+                       {exp.accomplishment_bullets && exp.accomplishment_bullets.map((b: string, j: number) => (
+                         <li key={j} style={{marginBottom: 6, listStyleType: 'disc'}}>{b}</li>
+                       ))}
+                     </ul>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-
-        {skills && (
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
-              Key Skills for This Role
-            </div>
-            <p style={{ fontSize: 13.5, lineHeight: 1.75, color: 'var(--text-primary)' }}>{skills}</p>
-          </div>
-        )}
-
-        {!summary && !skills && (
-          <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'var(--font-sans)', fontSize: 13.5, lineHeight: 1.8, color: 'var(--text-primary)' }}>
-            {store.generatedCV}
-          </pre>
-        )}
+        </div>
       </div>
 
-      {/* Footer */}
-      <div style={{ padding: '10px 20px', borderTop: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.18)', fontSize: 11.5, color: 'var(--text-muted)' }}>
-        📄 A4 · Roboto/Calibri · 2 cm margins · Real work history used ·&nbsp;
-        <em>{store.company ? nameToFilePart(store.company) : nameToFilePart(store.fullName || 'Applicant')}_CV.pdf</em>
-      </div>
     </div>
   );
 }

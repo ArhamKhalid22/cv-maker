@@ -4,44 +4,12 @@ import { useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { useJobAI } from '@/hooks/useJobAI';
 import toast from 'react-hot-toast';
+import { safelyParseJSON } from '@/lib/json';
 
 function nameToFilePart(name: string) {
   return name.trim().replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '') || 'Applicant';
 }
 
-/**
- * Clean cover letter text from AI:
- *  1. Remove any trailing "Sincerely, ..." block the AI adds (template already adds it)
- *  2. Replace placeholder name strings
- *  3. Fix common encoding artifacts (â€" → –, â€™ → ', etc.)
- */
-function cleanLetter(raw: string, name: string): string {
-  let text = raw
-    // Fix UTF-8 mojibake first
-    .replace(/â€™/g, "'").replace(/\u00e2\u0080\u0099/g, "'")
-    .replace(/â€œ/g, '"').replace(/\u00e2\u0080\u009c/g, '"')
-    .replace(/â€/g,  '"').replace(/\u00e2\u0080\u009d/g, '"')
-    .replace(/â€"/g, '–').replace(/\u00e2\u0080\u0093/g, '–')
-    .replace(/â€"/g, '—').replace(/\u00e2\u0080\u0094/g, '—')
-    // Remove any sign-off block the AI appended.
-    // Matches everything from the last blank line before "Sincerely/Regards/…" to end.
-    .replace(
-      /[\n\r]{1,2}[\s]*(?:Sincerely|Best regards|Kind regards|Yours sincerely|Yours faithfully|Warm regards|Warmly|Regards|Cheers|With regards|Respectfully)[,.]?[\s\S]*$/im,
-      ''
-    )
-    // Also strip trailing name-only lines (in case AI just signs the name without a closing)
-    .replace(new RegExp(`\\n+${name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`), '')
-    // Replace any leftover placeholder name strings
-    .replace(/\[Applicant Name\]/gi, name)
-    .replace(/\[Your Name\]/gi, name)
-    .replace(/\busername\b/gi, name)
-    .trim();
-
-  return text;
-}
-
-
-/** Open letter in a new tab as a Blob (avoids document.write encoding issues) */
 function openBlobHTML(html: string, title: string) {
   const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
   const url  = URL.createObjectURL(blob);
@@ -63,117 +31,111 @@ export default function CoverLetterOutput() {
   const { generate, regenerate, coverStatus, coverError } = useJobAI();
   const [copied, setCopied] = useState(false);
 
+  // Safely parse JSON
+  let clData = null;
+  if (store.coverLetter) {
+    const raw = safelyParseJSON<any>(store.coverLetter);
+    if (raw && raw.applicant_profile) {
+      clData = raw.applicant_profile;
+    }
+  }
+
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(store.coverLetter);
+    await navigator.clipboard.writeText(JSON.stringify(clData, null, 2) || store.coverLetter);
     setCopied(true);
-    toast.success('Copied!');
+    toast.success('Copied JSON data!');
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadPDF = () => {
-    const name     = store.fullName?.trim()  || 'Applicant';
-    const company  = store.company?.trim()   || '';
-    const job      = store.jobTitle?.trim()  || 'Position';
-    const email    = store.email?.trim()     || '';
-    const phone    = store.phone?.trim()     || '';
-    const city     = store.city?.trim()      || '';
-    const linkedin = store.linkedin?.trim()  || '';
+    if (!clData) {
+      toast.error("Failed to read Cover Letter structured data.");
+      return;
+    }
 
-    const today = new Date().toLocaleDateString('en-GB', {
-      year: 'numeric', month: 'long', day: 'numeric',
-    });
+    const { personal_information: pInfo, cover_letter_data: cData } = clData;
 
-    const letterBody = cleanLetter(store.coverLetter, name);
+    const name     = pInfo.full_name?.trim() || store.fullName?.trim() || 'Applicant';
+    const email    = pInfo.email?.trim() || store.email?.trim() || '';
+    const phone    = pInfo.phone?.trim() || store.phone?.trim() || '';
+    const location = pInfo.location?.trim() || store.city?.trim() || '';
+    
+    const recipientCompany = cData.recipient_company?.trim() || store.company?.trim() || '';
 
-    // Body paragraphs
-    const paragraphs = letterBody
-      .split('\n\n')
-      .map(p => p.trim())
-      .filter(Boolean)
-      // Remove the salutation line — we render it in the template
-      .filter(p => !/^Dear Hiring Manager/i.test(p))
-      .map(p => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
-      .join('\n');
+    const contactParts = [email, phone, location].filter(Boolean);
 
-    // Contact: only filled fields
-    const contactParts: string[] = [];
-    if (email)    contactParts.push(email);
-    if (phone)    contactParts.push(phone);
-    if (city)     contactParts.push(city);
-    if (linkedin) contactParts.push(
-      `<a href="https://${linkedin.replace(/^https?:\/\//, '')}" style="color:#333;text-decoration:underline;">LinkedIn</a>`
-    );
-    const baseName = company ? nameToFilePart(company) : nameToFilePart(name);
+    const baseName = recipientCompany ? nameToFilePart(recipientCompany) : nameToFilePart(name);
     const filename = `${baseName}_Cover_Letter`;
+
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="author" content="${name}"/>
-  <title>${name} — Cover Letter</title>
+  <title>${name} - Cover Letter</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
-      font-family: 'Roboto', Calibri, Arial, sans-serif;
-      font-size: 10.5pt;
-      line-height: 1.65;
-      color: #111;
-      background: #fff;
+      font-family: 'Jost', Arial, sans-serif;
+      font-size: 11pt; line-height: 1.6; color: #1a202c; background: #fff;
     }
+    @page { size: A4; margin: 2.5cm; }
+    @media screen { body { max-width: 21cm; margin: 2rem auto; padding: 2.5cm; box-shadow: 0 0 20px rgba(0,0,0,0.1); } }
+    @media print { body { padding: 0; } }
 
-    @page { size: A4; margin: 2cm; }
-    @media screen { body { max-width: 21cm; margin: 0 auto; padding: 2cm; } }
-    @media print  { body { padding: 0; } }
+    .header {
+      margin-bottom: 3rem; border-bottom: 2px solid #2d3748; padding-bottom: 1.5rem;
+    }
+    .header .name { font-size: 24pt; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.5rem; }
+    .header .contact { font-size: 10pt; color: #4a5568; }
 
-    .sender-name { font-size: 18pt; font-weight: 700; margin-bottom: 4px; }
-    .sender-contact { font-size: 9.5pt; color: #444; margin-bottom: 12px; }
-    .divider { border: none; border-top: 2px solid #111; margin: 10px 0 20px; }
-    .date-line { font-size: 10.5pt; color: #333; margin-bottom: 16px; }
-    .recipient-label { font-size: 10.5pt; margin-bottom: 4px; }
-    .subject-line {
-      font-weight: 700; font-size: 10.5pt;
-      border-bottom: 1px solid #ccc; padding-bottom: 6px; margin: 16px 0 20px;
-    }
-    .salutation { margin-bottom: 14px; font-size: 10.5pt; }
-    p {
-      font-size: 10.5pt; line-height: 1.7; color: #111;
-      margin-bottom: 14px; text-align: justify;
-    }
-    .signoff { margin-top: 28px; }
-    .signoff .closing { margin-bottom: 30px; font-size: 10.5pt; }
-    .signoff .sig-name { font-weight: 700; font-size: 12pt; }
+    .letter-info { margin-bottom: 2rem; font-size: 10.5pt; line-height: 1.5; color: #2d3748; }
+    
+    .body-content { margin-bottom: 2rem; font-size: 10.5pt; text-align: justify; }
+    .body-content p { margin-bottom: 1.25rem; }
+    .body-content ul { margin: 0 0 1.25rem 2rem; }
+    .body-content li { margin-bottom: 0.5rem; }
+
+    .sign-off-block { margin-top: 2rem; font-size: 11pt; }
+    .sign-off-block .signature { font-family: 'Jost', cursive; font-size: 18pt; margin-top: 1rem; color: #1a202c; font-style: italic; }
   </style>
 </head>
 <body>
 
-  <!-- SENDER -->
-  <div class="sender-name">${name}</div>
-  ${contactParts.length ? `<div class="sender-contact">${contactParts.join(' &nbsp;·&nbsp; ')}</div>` : ''}
-  <hr class="divider"/>
+  <div class="header">
+    <div class="name">${name}</div>
+    <div class="contact">${contactParts.join(' &nbsp;|&nbsp; ')}</div>
+  </div>
 
-  <!-- DATE -->
-  <div class="date-line">${today}</div>
+  <div class="letter-info">
+    <div style="margin-bottom: 1.5rem;">${cData.date || new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    
+    ${cData.recipient_name ? `<div><strong>${cData.recipient_name}</strong></div>` : ''}
+    ${recipientCompany ? `<div>${recipientCompany}</div>` : ''}
+    ${cData.recipient_address ? `<div>${cData.recipient_address}</div>` : ''}
+  </div>
 
-  <!-- RECIPIENT -->
-  <div class="recipient-label">Hiring Manager</div>
-  ${company ? `<div class="recipient-label">${company}</div>` : ''}
+  <div class="body-content">
+    <p><strong>${cData.greeting || 'Dear Hiring Manager,'}</strong></p>
+    
+    ${cData.opening_paragraph ? `<p>${cData.opening_paragraph}</p>` : ''}
+    
+    ${cData.body_paragraphs && cData.body_paragraphs.length > 0 ? cData.body_paragraphs.map((p: string) => `<p>${p}</p>`).join('') : ''}
+    
+    ${cData.bulleted_achievements && cData.bulleted_achievements.length > 0 ? `
+      <ul>
+        ${cData.bulleted_achievements.map((b: string) => `<li>${b}</li>`).join('')}
+      </ul>
+    ` : ''}
 
-  <!-- SUBJECT -->
-  <div class="subject-line">Re: Application for ${job}${company ? ` — ${company}` : ''}</div>
+    ${cData.closing_paragraph ? `<p>${cData.closing_paragraph}</p>` : ''}
+  </div>
 
-  <!-- SALUTATION -->
-  <div class="salutation">Dear Hiring Manager,</div>
-
-  <!-- BODY -->
-  ${paragraphs}
-
-  <!-- SIGN-OFF (rendered once, here) -->
-  <div class="signoff">
-    <div class="closing">Sincerely,</div>
-    <div class="sig-name">${name}</div>
+  <div class="sign-off-block">
+    <div>${cData.sign_off || 'Sincerely,'}</div>
+    <div class="signature">${name}</div>
   </div>
 
 </body>
@@ -192,7 +154,7 @@ export default function CoverLetterOutput() {
           ))}
         </div>
         <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, marginTop: 14 }}>
-          ✉️ Writing your cover letter…
+          ✉️ Formatting structured Cover Letter data…
         </p>
       </div>
     );
@@ -216,46 +178,48 @@ export default function CoverLetterOutput() {
         <div style={{ fontSize: 48, marginBottom: 16 }}>✉️</div>
         <h3 style={{ marginBottom: 8, fontWeight: 600 }}>No Cover Letter Yet</h3>
         <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 14 }}>
-          Generate a confident, human-sounding cover letter — signed with your real name
+          Generate a strong, JSON-structured Cover Letter
         </p>
         <button className="btn btn-primary" onClick={() => generate('cover')}>✨ Generate Cover Letter</button>
       </div>
     );
   }
 
-  const name = store.fullName?.trim() || 'Applicant';
-  const displayLetter = cleanLetter(store.coverLetter, name);
-  const paragraphs    = displayLetter
-    .split('\n\n')
-    .map(p => p.trim())
-    .filter(Boolean);
+  if (!clData) {
+    return (
+      <div className="glass-card" style={{ padding: 32, textAlign: 'center' }}>
+        <p style={{ color: 'var(--error)' }}>Could not parse the generated JSON perfectly. The AI might have returned invalid text.</p>
+        <pre style={{textAlign: 'left', background: '#f0f0f0', padding: 12, marginTop: 10, borderRadius: 6, fontSize: 12, overflowX:'auto'}}>
+          {store.coverLetter}
+        </pre>
+        <button className="btn btn-secondary" style={{marginTop: 16}} onClick={() => regenerate('cover')}>Regenerate</button>
+      </div>
+    );
+  }
+
+  const { personal_information: pInfo, cover_letter_data: cData } = clData;
 
   /* ── Output ── */
   return (
     <div className="glass-card animate-fade-in-up" style={{ padding: 0, overflow: 'hidden' }}>
-      {/* Header */}
+      {/* Header bar */}
       <div style={{
         padding: '14px 20px',
         borderBottom: '1px solid var(--border-subtle)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
-        background: 'rgba(6,182,212,0.05)',
+        background: 'rgba(99,102,241,0.05)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span>✉️</span>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>Cover Letter</span>
-          <span className="badge badge-info">AI Generated</span>
-          {store.fullName && (
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              signed as <strong style={{ color: 'var(--text-secondary)' }}>{store.fullName}</strong>
-            </span>
-          )}
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Structured JSON Cover Letter</span>
+          <span className="badge badge-success">Mark Briar Template</span>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className={`btn btn-secondary btn-sm copy-btn ${copied ? 'copied' : ''}`} onClick={handleCopy}>
-            {copied ? '✓ Copied' : '📋 Copy'}
+            {copied ? '✓ Copied JSON' : '📋 Copy JSON data'}
           </button>
           <button className="btn btn-secondary btn-sm" onClick={handleDownloadPDF}>
-            📥 Download Cover Letter PDF
+            📥 Download Print PDF
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => regenerate('cover')}>
             🔄 New Version
@@ -263,27 +227,55 @@ export default function CoverLetterOutput() {
         </div>
       </div>
 
-      {/* Preview */}
-      <div style={{ padding: '24px 28px' }}>
-        {paragraphs.map((para, i) => (
-          <p key={i} style={{
-            fontSize: 14, lineHeight: 1.85, color: 'var(--text-primary)',
-            marginBottom: i < paragraphs.length - 1 ? 18 : 0,
-          }}>
-            {para}
-          </p>
-        ))}
-        {/* Sign-off preview — rendered once */}
-        <div style={{ marginTop: 28, color: 'var(--text-secondary)', fontSize: 14 }}>
-          <div style={{ marginBottom: 24 }}>Sincerely,</div>
-          <div style={{ fontWeight: 700 }}>{name}</div>
+      {/* Structured Preview */}
+      <div style={{ padding: 40, background: '#fafafa', color: '#111', fontFamily: 'sans-serif' }}>
+        <div style={{ borderBottom: '2px solid #222', paddingBottom: 20, marginBottom: 30 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+            {pInfo?.full_name || store.fullName || 'Applicant'}
+          </h1>
+          <div style={{ fontSize: 13, color: '#555' }}>
+            {[pInfo?.email, pInfo?.phone, pInfo?.location].filter(Boolean).join(' | ')}
+          </div>
         </div>
-      </div>
 
-      {/* Footer */}
-      <div style={{ padding: '10px 20px', borderTop: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.18)', fontSize: 11.5, color: 'var(--text-muted)' }}>
-        📄 A4 · Roboto/Calibri · Single sign-off ·&nbsp;
-        <em>{store.company ? nameToFilePart(store.company) : nameToFilePart(store.fullName || 'Applicant')}_Cover_Letter.pdf</em>
+        <div style={{ fontSize: 13.5, lineHeight: 1.6, color: '#333' }}>
+          <div style={{ marginBottom: 24 }}>
+            {cData?.date || new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            {cData?.recipient_name && <div><strong>{cData.recipient_name}</strong></div>}
+            {(cData?.recipient_company || store.company) && <div>{cData.recipient_company || store.company}</div>}
+            {cData?.recipient_address && <div>{cData.recipient_address}</div>}
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+             <strong>{cData?.greeting || 'Dear Hiring Manager,'}</strong>
+          </div>
+
+          {cData?.opening_paragraph && <p style={{ marginBottom: 16, textAlign: 'justify' }}>{cData.opening_paragraph}</p>}
+
+          {cData?.body_paragraphs && cData.body_paragraphs.map((p: string, i: number) => (
+             <p key={i} style={{ marginBottom: 16, textAlign: 'justify' }}>{p}</p>
+          ))}
+
+          {cData?.bulleted_achievements && cData.bulleted_achievements.length > 0 && (
+             <ul style={{ paddingLeft: 24, marginBottom: 16 }}>
+               {cData.bulleted_achievements.map((b: string, i: number) => (
+                 <li key={i} style={{ marginBottom: 8 }}>{b}</li>
+               ))}
+             </ul>
+          )}
+
+          {cData?.closing_paragraph && <p style={{ marginBottom: 24, textAlign: 'justify' }}>{cData.closing_paragraph}</p>}
+
+          <div style={{ marginTop: 32 }}>
+            <div>{cData?.sign_off || 'Sincerely,'}</div>
+            <div style={{ fontSize: 20, marginTop: 12, fontFamily: 'cursive', color: '#111' }}>
+              {pInfo?.full_name || store.fullName || 'Applicant Name'}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
