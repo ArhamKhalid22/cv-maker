@@ -144,11 +144,7 @@ Requirements:
                 <><span>🔍</span> Extract Job Description</>
               )}
             </button>
-            {!process.env.NEXT_PUBLIC_FIRECRAWL_API_KEY && (
-              <div style={{ padding: '10px 14px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8, fontSize: 12, color: '#f59e0b' }}>
-                ⚠️ For best results with LinkedIn/Indeed (JS-heavy sites), add a FIRECRAWL_API_KEY. Plain fetch is used as fallback.
-              </div>
-            )}
+            {/* UI Warning Removed to keep interface clean */}
           </div>
         )}
 
