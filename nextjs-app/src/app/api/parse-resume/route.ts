@@ -58,8 +58,11 @@ export async function POST(req: NextRequest) {
     const cleaned = content.replace(/```json\n?|\n?```/g, '').trim();
     
     return NextResponse.json(JSON.parse(cleaned));
-  } catch (error) {
+  } catch (error: any) {
     console.error('[/api/parse-resume]', error);
-    return NextResponse.json({ error: 'Failed to parse resume' }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message || 'Failed to parse resume' },
+      { status: 500 }
+    );
   }
 }

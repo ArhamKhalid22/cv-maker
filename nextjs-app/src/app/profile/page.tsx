@@ -72,8 +72,9 @@ export default function ProfilePage() {
 
       toast.success('✨ Profile auto-filled from resume!');
     } catch (e) {
-      toast.error('Failed to parse resume. Please fill manually.');
-      console.error(e);
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      toast.error(`Error: ${msg}`);
+      console.error('Parse resume error:', msg);
     } finally {
       setIsParsing(false);
     }
