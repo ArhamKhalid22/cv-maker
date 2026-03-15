@@ -8,6 +8,7 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/', label: 'Home' },
+    { href: '/profile', label: '👤 Profile' },
     { href: '/generate', label: '✨ Generate' },
     { href: '/dashboard', label: '📊 Dashboard' },
   ];

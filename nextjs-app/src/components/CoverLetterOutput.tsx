@@ -103,9 +103,8 @@ export default function CoverLetterOutput() {
     if (linkedin) contactParts.push(
       `<a href="https://${linkedin.replace(/^https?:\/\//, '')}" style="color:#333;text-decoration:underline;">LinkedIn</a>`
     );
-
-    const filename = `${nameToFilePart(name)}_Cover_Letter`;
-
+    const baseName = company ? nameToFilePart(company) : nameToFilePart(name);
+    const filename = `${baseName}_Cover_Letter`;
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -284,7 +283,7 @@ export default function CoverLetterOutput() {
       {/* Footer */}
       <div style={{ padding: '10px 20px', borderTop: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.18)', fontSize: 11.5, color: 'var(--text-muted)' }}>
         📄 A4 · Roboto/Calibri · Single sign-off ·&nbsp;
-        <em>{nameToFilePart(store.fullName || 'Applicant')}_Cover_Letter.pdf</em>
+        <em>{store.company ? nameToFilePart(store.company) : nameToFilePart(store.fullName || 'Applicant')}_Cover_Letter.pdf</em>
       </div>
     </div>
   );

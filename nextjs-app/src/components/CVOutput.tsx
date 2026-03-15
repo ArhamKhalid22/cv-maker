@@ -117,7 +117,8 @@ export default function CVOutput() {
       : '';
 
     const skillsList = skills || combined || '';
-    const filename   = `${nameToFilePart(name)}_CV`;
+    const baseName   = company ? nameToFilePart(company) : nameToFilePart(name);
+    const filename   = `${baseName}_CV`;
 
     // Contact line: only show fields that are actually filled
     const contactParts: string[] = [];
@@ -379,7 +380,7 @@ export default function CVOutput() {
       {/* Footer */}
       <div style={{ padding: '10px 20px', borderTop: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.18)', fontSize: 11.5, color: 'var(--text-muted)' }}>
         📄 A4 · Roboto/Calibri · 2 cm margins · Real work history used ·&nbsp;
-        <em>{nameToFilePart(store.fullName || 'Applicant')}_CV.pdf</em>
+        <em>{store.company ? nameToFilePart(store.company) : nameToFilePart(store.fullName || 'Applicant')}_CV.pdf</em>
       </div>
     </div>
   );
