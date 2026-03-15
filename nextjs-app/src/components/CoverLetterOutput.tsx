@@ -16,26 +16,30 @@ function nameToFilePart(name: string) {
  *  3. Fix common encoding artifacts (â€" → –, â€™ → ', etc.)
  */
 function cleanLetter(raw: string, name: string): string {
-  return raw
-    // Strip any sign-off the AI added (we render our own)
-    .replace(/\n+\s*(Sincerely|Best regards|Kind regards|Yours sincerely|Regards)[,\s\S]*$/i, '')
-    // Fix UTF-8 mojibake from poorly encoded LLM output
-    .replace(/\u00e2\u0080\u0099/g, "'")   // â€™  → '
-    .replace(/\u00e2\u0080\u009c/g, '"')   // â€œ  → "
-    .replace(/\u00e2\u0080\u009d/g, '"')   // â€   → "
-    .replace(/\u00e2\u0080\u0093/g, '–')   // â€"  → –
-    .replace(/\u00e2\u0080\u0094/g, '—')   // â€"  → —
-    .replace(/â€™/g, "'")
-    .replace(/â€œ/g, '"')
-    .replace(/â€/g, '"')
-    .replace(/â€"/g, '–')
-    .replace(/â€"/g, '—')
-    // Replace any placeholder name strings
+  let text = raw
+    // Fix UTF-8 mojibake first
+    .replace(/â€™/g, "'").replace(/\u00e2\u0080\u0099/g, "'")
+    .replace(/â€œ/g, '"').replace(/\u00e2\u0080\u009c/g, '"')
+    .replace(/â€/g,  '"').replace(/\u00e2\u0080\u009d/g, '"')
+    .replace(/â€"/g, '–').replace(/\u00e2\u0080\u0093/g, '–')
+    .replace(/â€"/g, '—').replace(/\u00e2\u0080\u0094/g, '—')
+    // Remove any sign-off block the AI appended.
+    // Matches everything from the last blank line before "Sincerely/Regards/…" to end.
+    .replace(
+      /[\n\r]{1,2}[\s]*(?:Sincerely|Best regards|Kind regards|Yours sincerely|Yours faithfully|Warm regards|Warmly|Regards|Cheers|With regards|Respectfully)[,.]?[\s\S]*$/im,
+      ''
+    )
+    // Also strip trailing name-only lines (in case AI just signs the name without a closing)
+    .replace(new RegExp(`\\n+${name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`), '')
+    // Replace any leftover placeholder name strings
     .replace(/\[Applicant Name\]/gi, name)
     .replace(/\[Your Name\]/gi, name)
     .replace(/\busername\b/gi, name)
     .trim();
+
+  return text;
 }
+
 
 /** Open letter in a new tab as a Blob (avoids document.write encoding issues) */
 function openBlobHTML(html: string, title: string) {

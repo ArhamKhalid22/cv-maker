@@ -242,7 +242,23 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'jobai-pro-storage',
-      partialize: (state) => ({ applications: state.applications }),
+      partialize: (state) => ({
+        // ── Persist profile fields (user fills once, stays forever) ──
+        applications:   state.applications,
+        fullName:       state.fullName,
+        email:          state.email,
+        phone:          state.phone,
+        city:           state.city,
+        linkedin:       state.linkedin,
+        userBackground: state.userBackground,
+        education:      state.education,
+        hardSkills:     state.hardSkills,
+        softSkills:     state.softSkills,
+        achievements:   state.achievements,
+        // NOTE: jobDescription, jobTitle, company, jobUrl, and
+        // generated content are intentionally NOT persisted so each
+        // new job application starts fresh.
+      }),
     }
   )
 );

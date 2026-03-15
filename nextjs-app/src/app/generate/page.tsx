@@ -149,8 +149,13 @@ export default function GeneratePage() {
   const isAnyLoading = cvStatus === 'loading' || coverStatus === 'loading' || skillsStatus === 'loading';
   const hasOutput    = store.generatedCV || store.coverLetter || store.skillsAnalysis;
 
+  // Is the user's profile already filled from a previous session?
+  const profileComplete = !!(store.fullName?.trim() && store.userBackground?.trim());
+
   const goBack = () => setStep(s => Math.max(0, s - 1));
   const goNext = () => setStep(s => Math.min(TOTAL - 1, s + 1));
+  // Jump directly to the generate step
+  const skipToGenerate = () => setStep(TOTAL - 1);
 
   const validate = (requiredMsg: string, condition: boolean) => {
     if (!condition) { toast.error(requiredMsg); return false; }
@@ -175,6 +180,34 @@ export default function GeneratePage() {
         return (
           <div>
             <StepTitle icon="🎯" title="What job are you applying for?" sub="Paste the full job description, or provide a URL/screenshot." />
+
+            {/* Returning-user shortcut */}
+            {profileComplete && (
+              <div style={{
+                padding: '14px 18px', marginBottom: 18,
+                background: 'rgba(16,185,129,0.08)',
+                border: '1px solid rgba(16,185,129,0.25)',
+                borderRadius: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+              }}>
+                <div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#10b981', marginBottom: 2 }}>
+                    ✅ Profile saved — welcome back, {store.fullName}!
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    Your details are remembered. Just paste the new job and generate.
+                  </div>
+                </div>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ border: '1px solid rgba(16,185,129,0.35)', color: '#10b981', whiteSpace: 'nowrap' }}
+                  onClick={skipToGenerate}
+                >
+                  ⚡ Skip to Generate
+                </button>
+              </div>
+            )}
+
             <JobInputPanel />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
               <div>
@@ -188,10 +221,11 @@ export default function GeneratePage() {
             </div>
             <NavButtons step={step} onBack={goBack}
               onNext={() => { if (!validate('Please add a job description first.', !!store.jobDescription.trim())) return; goNext(); }}
-              nextLabel="Next → Your Details"
+              nextLabel={profileComplete ? 'Review Profile →' : 'Next → Your Details'}
             />
           </div>
         );
+
 
       // ── 1: Identity ──
       case 1:
