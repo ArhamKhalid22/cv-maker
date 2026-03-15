@@ -26,7 +26,8 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "natural": "^6.10.0",
-    "pdfkit": "^0.13.0"
+    "pdfkit": "^0.13.0",
+    "next": "^15.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
